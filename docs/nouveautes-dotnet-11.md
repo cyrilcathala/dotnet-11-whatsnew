@@ -43,7 +43,11 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
 - 🆕 `JsonSerializer.SerializeAsyncEnumerable` vers un `PipeWriter`, sortie JSON Lines (`topLevelValues: true`)
 
 ## 06 — « Houston, on a un problème »
-- 🆕 Runtime Async : stack traces propres, moins d'allocations (comparaison net10.0 / net11.0 + BenchmarkDotNet)
+- 🆕 Runtime Async : plus de state machine générée par le compilateur, la pile d'appels réelle ne contient plus que les méthodes métier (21 frames en .NET 10, 9 en .NET 11 dans `tools/Houston`)
+- 🆕 Runtime Async : moins d'allocations et plus rapide sur le même pipeline (BenchmarkDotNet ShortRun, 100 paquets : 38,7 µs / 28 928 B en .NET 10 → 21,9 µs / 144 B en .NET 11)
+  - ⚠️ Écart constaté sur la RC3 : Runtime Async n'est pas actif par défaut pour le code utilisateur ; il faut `<Features>$(Features);runtime-async=on</Features>` (posé pour `net11.0` seulement, sinon le runtime .NET 10 refuse de charger les méthodes)
+  - ⚠️ `Exception.ToString()` est déjà nettoyé depuis .NET Core 2.1 et reste identique : la différence se montre avec la pile réelle (`new StackTrace()`) capturée au moment de la panne
+  - ℹ️ BenchmarkDotNet 0.15.8 ne connaît pas .NET 11 : `0.16.0-preview.2` (`RuntimeMoniker.Net11_0`)
 
 ## Bonus en rafale
 - 🆕 `EqualityComparer<T>.Create` (comparateur depuis un sélecteur de clé)
