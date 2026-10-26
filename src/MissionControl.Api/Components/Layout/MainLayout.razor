@@ -1,5 +1,25 @@
 ﻿@inherits LayoutComponentBase
 
+<header class="console">
+    <a class="mark" href="" aria-label="Mission Control — accueil">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="6" fill="currentColor" />
+            <ellipse cx="16" cy="16" rx="14" ry="5.5" transform="rotate(-24 16 16)" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <circle cx="28.4" cy="10.3" r="2" class="mark-craft" />
+        </svg>
+        <span>Mission Control</span>
+    </a>
+
+    <nav aria-label="Stations">
+        <NavLink href="" Match="NavLinkMatch.All">Accueil</NavLink>
+    </nav>
+
+    <p class="utc" aria-label="Heure UTC">
+        <span>UTC</span>
+        <time data-utc-clock>--:--:--</time>
+    </p>
+</header>
+
 <main>
     @Body
 </main>
@@ -7,5 +27,5 @@
 <div id="blazor-error-ui" data-nosnippet>
     Une erreur inattendue s'est produite.
     <a href="." class="reload">Recharger</a>
-    <span class="dismiss">🗙</span>
+    <button type="button" class="dismiss" aria-label="Fermer">✕</button>
 </div>

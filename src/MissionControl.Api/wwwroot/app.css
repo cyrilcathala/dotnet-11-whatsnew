@@ -1,38 +1,506 @@
+/* Mission Control — design system.
+   Nuit spatiale (console SpaceX), rigueur des documents de mission NASA, orange d'allumage Ariane. */
+
+@font-face {
+    font-family: "Barlow";
+    font-weight: 400;
+    font-display: swap;
+    src: url("fonts/barlow-400.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Barlow";
+    font-weight: 500;
+    font-display: swap;
+    src: url("fonts/barlow-500.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Barlow";
+    font-weight: 600;
+    font-display: swap;
+    src: url("fonts/barlow-600.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Barlow Condensed";
+    font-weight: 600;
+    font-display: swap;
+    src: url("fonts/barlow-condensed-600.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("fonts/jetbrains-mono.woff2") format("woff2");
+}
+
+:root {
+    color-scheme: dark;
+
+    /* Coque : neutres teintés vers le bleu nuit. */
+    --void: oklch(0.13 0.012 260);
+    --hull: oklch(0.17 0.014 260);
+    --hull-raised: oklch(0.21 0.016 260);
+    --line: oklch(0.29 0.016 260);
+    --line-strong: oklch(0.42 0.018 260);
+
+    --ink: oklch(0.96 0.005 260);
+    --ink-2: oklch(0.80 0.012 260);
+    --ink-3: oklch(0.66 0.014 260);
+
+    /* Allumage : la seule couleur d'action. */
+    --ignition: oklch(0.72 0.19 45);
+    --ignition-hover: oklch(0.78 0.17 50);
+    --ignition-ink: oklch(0.16 0.03 45);
+
+    /* États. */
+    --nominal: oklch(0.79 0.16 152);
+    --caution: oklch(0.84 0.15 85);
+    --abort: oklch(0.69 0.2 27);
+    --signal: oklch(0.81 0.11 225);
+    --orphan: oklch(0.76 0.13 300);
+
+    --font-ui: "Barlow", "Bahnschrift", "DIN Alternate", system-ui, sans-serif;
+    --font-display: "Barlow Condensed", "Bahnschrift Condensed", "Barlow", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    --radius: 3px;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+    --z-sticky: 10;
+    --z-modal: 30;
+    --z-toast: 40;
+
+    --gutter: clamp(1rem, 3vw, 2.5rem);
+    --content: 84rem;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--void);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+    background: var(--ignition);
+    color: var(--ignition-ink);
+}
+
+/* ---------- Typographie ---------- */
+
+h1,
+h2,
+h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.05;
+    text-transform: uppercase;
+    text-wrap: balance;
+}
+
+h1 {
+    font-size: 2.75rem;
+    letter-spacing: 0.01em;
+}
+
+h2 {
+    font-size: 1.25rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+}
+
+h3 {
+    font-size: 1.0625rem;
+    letter-spacing: 0.06em;
+}
+
 h1:focus {
     outline: none;
 }
 
+p {
+    margin: 0;
+    text-wrap: pretty;
+}
+
+a {
+    color: var(--signal);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    transition: color 150ms var(--ease-out);
+}
+
+a:hover {
+    color: var(--ink);
+}
+
+code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius);
+    background: var(--hull-raised);
+    color: var(--ink);
+}
+
+strong {
+    font-weight: 600;
+    color: var(--ink);
+}
+
+:focus-visible {
+    outline: 2px solid var(--ignition);
+    outline-offset: 2px;
+}
+
+.mono,
+td.num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- En-tête de page ---------- */
+
+.page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    padding-block: 2.5rem 1.75rem;
+    margin-block-end: 2rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.page-head p {
+    max-width: 62ch;
+    margin-block-start: 0.6rem;
+    color: var(--ink-2);
+}
+
+/* ---------- Panneaux ---------- */
+
+.panel {
+    padding: 1.25rem 1.5rem 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--hull);
+}
+
+.panel > h2 {
+    margin-block-end: 1.25rem;
+}
+
+.section-title {
+    margin-block: 2.5rem 1rem;
+}
+
+.empty {
+    padding: 1.25rem 1.5rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--ink-2);
+}
+
+/* ---------- Boutons ---------- */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    border: 1px solid var(--ignition);
+    border-radius: var(--radius);
+    background: var(--ignition);
+    color: var(--ignition-ink);
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 100ms var(--ease-out);
+}
+
+.btn:hover {
+    border-color: var(--ignition-hover);
+    background: var(--ignition-hover);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn:disabled {
+    border-color: var(--line-strong);
+    background: transparent;
+    color: var(--ink-3);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn.secondary {
+    border-color: var(--line-strong);
+    background: transparent;
+    color: var(--ink);
+}
+
+.btn.secondary:hover {
+    border-color: var(--ink-2);
+    background: var(--hull-raised);
+}
+
+.btn.danger {
+    border-color: var(--abort);
+    background: transparent;
+    color: var(--abort);
+}
+
+.btn.danger:hover {
+    background: var(--abort);
+    color: var(--void);
+}
+
+/* ---------- Champs ---------- */
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--ink-2);
+}
+
+input,
+select {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--void);
+    color: var(--ink);
+    font: inherit;
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+}
+
+input:hover,
+select:hover {
+    border-color: var(--ink-3);
+}
+
+input:focus-visible,
+select:focus-visible {
+    outline: none;
+    border-color: var(--ignition);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ignition) 30%, transparent);
+}
+
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    border-color: var(--nominal);
 }
 
 .invalid {
-    outline: 1px solid #e50000;
+    border-color: var(--abort);
 }
 
 .validation-message {
-    color: #e50000;
+    color: var(--abort);
+    font-size: 0.875rem;
 }
 
-.blazor-error-boundary {
-    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
-    padding: 1rem 1rem 1rem 3.7rem;
-    color: white;
+/* ---------- Tableaux ---------- */
+
+.table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--hull);
 }
 
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
-    }
-
-.darker-border-checkbox.form-check-input {
-    border-color: #929292;
+table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
+th,
+td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--line);
+    text-align: start;
+    white-space: nowrap;
+}
+
+th {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: var(--hull-raised);
+}
+
+tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+tbody tr {
+    transition: background-color 150ms var(--ease-out);
+}
+
+tbody tr:hover {
+    background: color-mix(in oklch, var(--hull-raised) 70%, transparent);
+}
+
+td.num,
+th.num {
     text-align: end;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-    text-align: start;
+td.num,
+td.mono {
+    font-size: 0.9375rem;
+}
+
+/* ---------- Statuts ---------- */
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--tone, var(--ink-2));
+}
+
+.status::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+.banner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    padding: 0.85rem 1.1rem;
+    border: 1px solid color-mix(in oklch, var(--tone, var(--ink-2)) 55%, transparent);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--tone, var(--ink-2)) 10%, var(--hull));
+}
+
+.banner > strong {
+    color: var(--tone, var(--ink));
+}
+
+.tone-nominal { --tone: var(--nominal); }
+.tone-caution { --tone: var(--caution); }
+.tone-abort { --tone: var(--abort); }
+.tone-signal { --tone: var(--signal); }
+.tone-orphan { --tone: var(--orphan); }
+.tone-muted { --tone: var(--ink-3); }
+
+/* ---------- Relevés (instruments) ---------- */
+
+.readouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--hull);
+    list-style: none;
+}
+
+.readout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.1rem 1.5rem 1.25rem;
+    border-inline-end: 1px solid var(--line);
+}
+
+.readout:last-child {
+    border-inline-end: 0;
+}
+
+.readout-label {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.readout-value {
+    font-family: var(--font-mono);
+    font-size: 2.25rem;
+    font-weight: 500;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+}
+
+.readout-value small {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--ink-3);
+}
+
+/* ---------- Erreurs Blazor ---------- */
+
+.blazor-error-boundary {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--abort);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--abort) 14%, var(--hull));
+    color: var(--ink);
+}
+
+.blazor-error-boundary::after {
+    content: "Une erreur s'est produite.";
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

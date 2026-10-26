@@ -1,20 +1,163 @@
-#blazor-error-ui {
-    color-scheme: light only;
-    background: lightyellow;
-    bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
-    box-sizing: border-box;
-    display: none;
-    left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
-    position: fixed;
-    width: 100%;
-    z-index: 1000;
+.console {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    align-items: stretch;
+    gap: 2rem;
+    min-height: 4rem;
+    padding-inline: max(var(--gutter), calc((100% - var(--content)) / 2 + var(--gutter)));
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in oklch, var(--void) 92%, transparent);
+    backdrop-filter: blur(10px);
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
+.mark {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.mark svg {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: none;
+}
+
+.mark-craft {
+    fill: var(--ignition);
+}
+
+nav {
+    display: flex;
+    align-items: stretch;
+    gap: 0.25rem;
+    margin-inline-start: auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+nav ::deep a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding-inline: 0.85rem;
+    color: var(--ink-3);
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: color 150ms var(--ease-out);
+}
+
+nav ::deep a::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0.85rem;
+    bottom: -1px;
+    height: 2px;
+    background: var(--ignition);
+    transform: scaleX(0);
+    transition: transform 200ms var(--ease-out);
+}
+
+nav ::deep a:hover {
+    color: var(--ink);
+}
+
+nav ::deep a.active {
+    color: var(--ink);
+}
+
+nav ::deep a.active::after {
+    transform: scaleX(1);
+}
+
+.utc {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-inline-start: 1.5rem;
+    border-inline-start: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.utc span {
+    font-size: 0.75rem;
+    color: var(--ink-3);
+}
+
+.utc time {
+    font-size: 1rem;
+    color: var(--ink);
+}
+
+main {
+    max-width: var(--content);
+    margin-inline: auto;
+    padding: 0 var(--gutter) 5rem;
+}
+
+@media (max-width: 64rem) {
+    .utc {
+        display: none;
     }
+}
+
+@media (max-width: 48rem) {
+    .console {
+        flex-wrap: wrap;
+        gap: 0;
+        padding-block-start: 0.75rem;
+    }
+
+    nav {
+        flex-basis: 100%;
+        margin-inline: calc(var(--gutter) * -1);
+        padding-inline: calc(var(--gutter) - 0.85rem);
+        min-height: 3rem;
+    }
+}
+
+#blazor-error-ui {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: var(--z-toast);
+    display: none;
+    padding: 0.85rem calc(var(--gutter) + 2.5rem) 0.85rem var(--gutter);
+    border-top: 1px solid var(--abort);
+    background: color-mix(in oklch, var(--abort) 18%, var(--hull));
+    color: var(--ink);
+}
+
+#blazor-error-ui .reload {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+#blazor-error-ui .dismiss {
+    position: absolute;
+    top: 50%;
+    right: var(--gutter);
+    translate: 0 -50%;
+    padding: 0.25rem 0.5rem;
+    border: 0;
+    background: none;
+    color: var(--ink-2);
+    font-size: 1rem;
+    cursor: pointer;
+}

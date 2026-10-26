@@ -3,17 +3,28 @@
 
 <PageTitle>Mission Control</PageTitle>
 
-<h1>Bienvenue au centre de contrôle de mission 🚀</h1>
+<section class="launch @(_secondsLeft == 0 ? "lifted" : null)">
+    <div class="intro">
+        <h1>Bienvenue au centre de contrôle de mission</h1>
+        <p>Ici, on enregistre des sondes, on leur envoie des commandes et on suit leur télémétrie.</p>
+    </div>
 
-<p>Ici, on enregistre des sondes, on leur envoie des commandes et on suit leur télémétrie.</p>
-
-<section class="countdown">
-    <p role="status">@CountdownLabel</p>
-    <button class="btn" @onclick="Tick" disabled="@(_secondsLeft == 0)">Compte à rebours</button>
+    <div class="countdown">
+        <p class="clock" role="status">@CountdownLabel</p>
+        <ol class="sequence" aria-hidden="true">
+            @for (var second = Start; second > 0; second--)
+            {
+                <li class="@(second > _secondsLeft ? "elapsed" : null)"></li>
+            }
+        </ol>
+        <button class="btn" @onclick="Tick" disabled="@(_secondsLeft == 0)">Compte à rebours</button>
+    </div>
 </section>
 
 @code {
-    private int _secondsLeft = 10;
+    private const int Start = 10;
+
+    private int _secondsLeft = Start;
 
     private string CountdownLabel => _secondsLeft == 0 ? "Décollage !" : $"T-{_secondsLeft}";
 
