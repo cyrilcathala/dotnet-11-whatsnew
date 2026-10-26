@@ -75,6 +75,18 @@ public sealed class CommandTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task Probe_is_lost_after_its_self_destruction()
+    {
+        var probe = await RegisterProbeAsync();
+        var farewell = Assert.IsType<Acknowledged>((await SendAsync(new SelfDestruct(Guid.Empty, probe, probe))).Value);
+
+        var result = await SendAsync(new CapturePhoto(Guid.Empty, probe, Target: "Débris"));
+
+        var lost = Assert.IsType<ProbeLost>(result.Value);
+        Assert.Equal(farewell.ProbeTime, lost.LastContact);
+    }
+
+    [Fact]
     public async Task Command_to_an_unknown_probe_is_refused_in_french()
     {
         var response = await PostCommandAsync(new Thrust(Guid.Empty, "Sonde-fantôme", DeltaV: 1));
@@ -130,7 +142,10 @@ public sealed class CommandTests(WebApplicationFactory<Program> factory)
             .GetProperty("anyOf").EnumerateArray()
             .Select(c => c.GetProperty("$ref").GetString());
         Assert.Equal(
-            ["#/components/schemas/Acknowledged", "#/components/schemas/Rejected", "#/components/schemas/TimedOut"],
+            [
+                "#/components/schemas/Acknowledged", "#/components/schemas/Rejected",
+                "#/components/schemas/TimedOut", "#/components/schemas/ProbeLost",
+            ],
             cases);
     }
 
