@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MissionControl.ServiceDefaults\MissionControl.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\MissionControl.Telemetry\MissionControl.Telemetry.csproj" />
   </ItemGroup>
 
 </Project>
