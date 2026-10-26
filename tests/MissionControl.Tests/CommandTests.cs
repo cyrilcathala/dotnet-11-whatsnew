@@ -98,6 +98,23 @@ public sealed class CommandTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task A_command_id_already_used_is_refused_in_french()
+    {
+        var probe = await RegisterProbeAsync();
+        var id = Guid.CreateVersion7();
+        Assert.IsType<Acknowledged>((await SendAsync(new Thrust(id, probe, DeltaV: 5))).Value);
+
+        var response = await PostCommandAsync(new Rotate(id, probe, Attitude: 10));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDto>(Ct);
+        Assert.Equal($"Une commande d'identifiant {id} a déjà été envoyée.", problem!.Detail);
+        var history = await _client.GetFromJsonAsync<CommandLogEntry[]>("/commands", Ct);
+        Assert.Single(history!, e => e.Command.Id == id);
+    }
+
+    [Fact]
     public async Task Command_result_json_has_neither_envelope_nor_type_discriminator()
     {
         var probe = await RegisterProbeAsync();

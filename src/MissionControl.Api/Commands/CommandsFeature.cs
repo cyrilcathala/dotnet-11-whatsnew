@@ -27,15 +27,29 @@ public static class CommandsFeature
             history.Commands[id] is { } command ? TypedResults.Ok(command) : TypedResults.NotFound());
 
         // 🆕 .NET 11 : l'union CommandResult est décrite en anyOf de ses cas dans le document OpenAPI.
-        commands.MapPost("/", Results<Ok<CommandResult>, NotFound<ProblemDetails>> (ProbeCommand command, CommandCenter center) =>
-            center.TrySend(command, out var result)
-                ? TypedResults.Ok(result)
-                : TypedResults.NotFound(new ProblemDetails
+        commands.MapPost("/", Results<Ok<CommandResult>, NotFound<ProblemDetails>, Conflict<ProblemDetails>> (ProbeCommand command, CommandCenter center) =>
+        {
+            var status = center.Send(command, out var result);
+            if (status is SendStatus.UnknownProbe)
+            {
+                return TypedResults.NotFound(new ProblemDetails
                 {
                     Status = StatusCodes.Status404NotFound,
                     Title = "Sonde inconnue",
                     Detail = $"Sonde inconnue : « {command.ProbeName} ».",
-                }));
+                });
+            }
+            if (status is SendStatus.DuplicateId)
+            {
+                return TypedResults.Conflict(new ProblemDetails
+                {
+                    Status = StatusCodes.Status409Conflict,
+                    Title = "Identifiant de commande déjà utilisé",
+                    Detail = $"Une commande d'identifiant {command.Id} a déjà été envoyée.",
+                });
+            }
+            return TypedResults.Ok(result);
+        });
 
         return endpoints;
     }
