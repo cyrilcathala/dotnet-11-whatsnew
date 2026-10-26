@@ -1,0 +1,21 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>Mission Control</PageTitle>
+
+<h1>Bienvenue au centre de contrôle de mission 🚀</h1>
+
+<p>Ici, on enregistre des sondes, on leur envoie des commandes et on suit leur télémétrie.</p>
+
+<section class="countdown">
+    <p role="status">@CountdownLabel</p>
+    <button class="btn" @onclick="Tick" disabled="@(_secondsLeft == 0)">Compte à rebours</button>
+</section>
+
+@code {
+    private int _secondsLeft = 10;
+
+    private string CountdownLabel => _secondsLeft == 0 ? "Décollage !" : $"T-{_secondsLeft}";
+
+    private void Tick() => _secondsLeft = Math.Max(0, _secondsLeft - 1);
+}
