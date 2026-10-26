@@ -10,6 +10,10 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.18.3" />
   </ItemGroup>
 
+  <ItemGroup Label="Formats">
+    <PackageVersion Include="System.Formats.Cbor" Version="11.0.0-rc.3.26522.148" />
+  </ItemGroup>
+
   <ItemGroup Label="Aspire ServiceDefaults">
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
