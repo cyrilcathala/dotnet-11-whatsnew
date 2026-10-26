@@ -20,12 +20,16 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - ⚠️ Écart constaté sur la RC3 : seul l'`ErrorMessage` de l'attribut est localisé, et il remplace le message du `ValidationResult` renvoyé par `IsValidAsync` (un attribut = un message : « déjà pris » couvre donc aussi les noms réservés). Les messages produits par `IAsyncValidatableObject.ValidateAsync` ne sont pas localisés : on passe par `IStringLocalizer<ValidationMessages>` obtenu du `ValidationContext`
 
 ## 02 — Envoyer des commandes
-- 🆕 C# 15 : union types (`CommandResult`) et switch exhaustif
-- 🆕 C# 15 : closed hierarchies (hiérarchie des commandes)
-- 🆕 System.Text.Json : sérialisation/désérialisation des unions (cas actif écrit directement, sans `$type`)
-- 🆕 `[JsonUnion(TypeClassifier = typeof(JsonUnionTypeStructuralClassifier))]` pour distinguer des cas objets
+- 🆕 C# 15 : closed hierarchies — `closed record ProbeCommand(Id, ProbeName)` → `Thrust`, `Rotate`, `CapturePhoto`, `SelfDestruct` ; le `switch` du centre de commandes et celui de la page n'ont pas de branche `default`
+- 🆕 C# 15 : union types — `union CommandResult(Acknowledged, Rejected, TimedOut, ProbeLost)`, quatre records sans base commune ; switch exhaustif, y compris dans le corps de l'union (`CommandId`)
+  - Démo : `git show` du commit « cas ProbeLost » — ajouter le cas fait échouer `CommandResult.CommandId` et `Commands.razor` avec CS8509 (warning promu en erreur par `TreatWarningsAsErrors`)
+  - Union vs closed hierarchy : la commande est une famille qu'on possède (base commune, même assembly) ; le résultat compose des types indépendants
+- 🆕 System.Text.Json : sérialisation/désérialisation des unions (cas actif écrit directement, sans enveloppe ni `$type` : `{"commandId":"…","reason":"…"}`)
+- 🆕 `[JsonUnion(TypeClassifier = typeof(JsonUnionTypeStructuralClassifier))]` pour distinguer des cas objets d'après leurs propriétés (fonctionne même si tous les cas partagent `commandId`)
+  - 🔁 En contraste, la commande en entrée reste un polymorphisme classique `[JsonPolymorphic]` / `[JsonDerivedType]` avec discriminant `kind` (rappel .NET 7+), compatible avec `closed`
 - 🆕 Mini-bonus : `union SensorValue(double, string, bool)`, cas choisi d'après le type de token JSON
 - 🆕 Minimal APIs : unions en body JSON, décrites en `anyOf` dans OpenAPI
+  - `POST /commands` (`Results<Ok<CommandResult>, NotFound<ProblemDetails>>`) : réponse 200 = `anyOf` des quatre cas, sans `discriminator` ; la requête `ProbeCommand` apparaît aussi en `anyOf`, mais avec `discriminator` sur `kind`
 
 ## 03 — Petits raffinements C# 15
 - 🆕 Collection expression arguments (`[with(...), ..]`)
