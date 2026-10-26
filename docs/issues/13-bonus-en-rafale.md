@@ -2,6 +2,8 @@
 
 Labels : `ready-for-agent` · Tags : `07-labeled-break`, `08-equality-comparer`, `09-process`, `10-file-based-apps`
 
+Statut : ✅ terminé — fusionné dans `integration/mission-control`
+
 ## Parent
 
 [docs/spec.md](../spec.md)

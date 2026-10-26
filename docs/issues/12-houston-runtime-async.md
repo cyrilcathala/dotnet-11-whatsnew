@@ -2,6 +2,8 @@
 
 Labels : `ready-for-agent` · Tag : `06-houston`
 
+Statut : ✅ terminé — fusionné dans `integration/mission-control`
+
 ## Parent
 
 [docs/spec.md](../spec.md)

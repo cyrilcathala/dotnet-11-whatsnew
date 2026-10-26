@@ -2,6 +2,8 @@
 
 Labels : `ready-for-agent` · Tag : `01-register-probe`
 
+Statut : ✅ terminé — fusionné dans `integration/mission-control`
+
 ## Parent
 
 [docs/spec.md](../spec.md)

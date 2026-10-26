@@ -2,6 +2,8 @@
 
 Labels : `ready-for-agent` · Tag : `04-telemetry` (posé à la fin de cette issue)
 
+Statut : ✅ terminé — fusionné dans `integration/mission-control`
+
 ## Parent
 
 [docs/spec.md](../spec.md)
