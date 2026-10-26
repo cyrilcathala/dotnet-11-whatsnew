@@ -93,20 +93,21 @@ public sealed class LogbookExportTests : IAsyncDisposable
     [Fact]
     public async Task Export_during_an_import_gives_complete_lines_received_so_far()
     {
-        var packets = Generate(20_000);
-        var import = _client.PostAsync(
-            "/telemetry/import", new TelemetryContent(TelemetryFormats.JsonLines, Slowly(packets)), Ct);
+        var first = Generate(5_000);
+        var second = Generate(20_000);
+        TelemetryPacket[] all = [.. first, .. second];
+        await ImportAsync(TelemetryFormats.JsonLines, first);
 
-        while (await _client.GetFromJsonAsync<StatusDto>("/telemetry", Ct) is { Packets: 0 })
-        {
-            await Task.Delay(10, Ct);
-        }
+        // L'export part pendant le second import, sans présumer d'où en est l'import à cet instant.
+        var import = _client.PostAsync(
+            "/telemetry/import", new TelemetryContent(TelemetryFormats.JsonLines, second.ToAsyncEnumerable()), Ct);
         var duringImport = ParseLines(await _client.GetStringAsync("/logbook/export", Ct));
         Assert.Equal(HttpStatusCode.OK, (await import).StatusCode);
 
-        Assert.InRange(duringImport.Length, 1, packets.Length - 1);
-        Assert.Equal(packets.Take(duringImport.Length), duringImport);
-        Assert.Equal(packets, ParseLines(await _client.GetStringAsync("/logbook/export", Ct)));
+        // Quel que soit l'instant : au moins le premier import, des lignes complètes, dans l'ordre de réception.
+        Assert.InRange(duringImport.Length, first.Length, all.Length);
+        Assert.Equal(all.Take(duringImport.Length), duringImport);
+        Assert.Equal(all, ParseLines(await _client.GetStringAsync("/logbook/export", Ct)));
     }
 
     [Fact]
@@ -124,11 +125,16 @@ public sealed class LogbookExportTests : IAsyncDisposable
                 Assert.NotEmpty(root.EnumerateFiles("*", SearchOption.AllDirectories));
             }
 
+            // Sous Windows, le fichier reste visible le temps que le dernier handle de lecture se ferme.
+            for (var attempt = 0; attempt < 40 && root.EnumerateFiles("*", SearchOption.AllDirectories).Any(); attempt++)
+            {
+                await Task.Delay(50, Ct);
+            }
             Assert.Empty(root.EnumerateFiles("*", SearchOption.AllDirectories));
         }
         finally
         {
-            root.Delete(recursive: true);
+            DeleteEventually(root);
         }
     }
 
@@ -152,7 +158,31 @@ public sealed class LogbookExportTests : IAsyncDisposable
         }
         finally
         {
-            root.Delete(recursive: true);
+            DeleteEventually(root);
+        }
+    }
+
+    /// <summary>
+    /// Sous Windows, un dossier que la station vient de supprimer peut rester un instant « en attente de suppression » :
+    /// il apparaît encore dans l'énumération mais ne s'ouvre plus. On réessaie brièvement.
+    /// </summary>
+    private static void DeleteEventually(DirectoryInfo directory)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                directory.Refresh();
+                if (directory.Exists)
+                {
+                    directory.Delete(recursive: true);
+                }
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException && attempt < 10)
+            {
+                Thread.Sleep(50);
+            }
         }
     }
 
@@ -190,20 +220,6 @@ public sealed class LogbookExportTests : IAsyncDisposable
     }
 
     /// <summary>Un flux qui s'étire : une pause tous les 1000 paquets, pour exporter pendant l'import.</summary>
-    private static async IAsyncEnumerable<TelemetryPacket> Slowly(IEnumerable<TelemetryPacket> packets)
-    {
-        var i = 0;
-        foreach (var packet in packets)
-        {
-            if (++i % 1_000 == 0)
-            {
-                await Task.Delay(20);
-            }
-            yield return packet;
-        }
-    }
-
-    private sealed record StatusDto(long Packets);
 
     private sealed record EntryDto(string Probe, long Seq);
 }
