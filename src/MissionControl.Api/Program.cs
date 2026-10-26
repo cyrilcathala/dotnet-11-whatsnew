@@ -6,6 +6,7 @@ using MissionControl.Api.Logbook;
 using MissionControl.Api.Probes;
 using MissionControl.Api.Report;
 using MissionControl.Api.Telemetry;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,7 @@ app.UseRequestDecompression();
 
 app.MapDefaultEndpoints();
 app.MapOpenApi();
+app.MapScalarApiReference();
 app.MapProbes();
 app.MapCommands();
 app.MapTelemetry();
