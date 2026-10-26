@@ -14,7 +14,21 @@ public interface ITelemetryImporter
 }
 
 /// <summary>Résumé renvoyé par <c>POST /telemetry/import</c>.</summary>
-public sealed record ImportSummary(string Format, long Packets, int Probes, TimeSpan Duration, double PacketsPerSecond);
+public sealed record ImportSummary(
+    string Format, long Packets, int Probes, TimeSpan Duration, double PacketsPerSecond, ImportMeasurements? Measurements = null);
+
+/// <summary>
+/// Mesures du banc d'essai pour un import. Le taux de compression vaut octets réseau / octets payload.
+/// Allocations, working set et CPU portent sur tout le processus.
+/// </summary>
+public sealed record ImportMeasurements(
+    string Compression,
+    long NetworkBytes,
+    long PayloadBytes,
+    double CompressionRatio,
+    long AllocatedBytes,
+    long PeakWorkingSet,
+    TimeSpan CpuTime);
 
 /// <summary>Lit les paquets au fil de l'eau et alimente le store par lots.</summary>
 public sealed class TelemetryImporter(TelemetryStore store, AsteroidCatalogStore catalogs) : ITelemetryImporter
