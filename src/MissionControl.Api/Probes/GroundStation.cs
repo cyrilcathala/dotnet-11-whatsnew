@@ -12,6 +12,6 @@ public sealed class GroundStation(ProbeRegistry registry)
     {
         await Task.Delay(Latency, cancellationToken);
 
-        return !registry.Fleet.Any(p => p.LaunchWindowOpensAt < closesAt && opensAt < p.LaunchWindowClosesAt);
+        return !registry.Fleet.Any(p => p.Overlaps(opensAt, closesAt));
     }
 }

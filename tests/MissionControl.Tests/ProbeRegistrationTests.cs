@@ -62,6 +62,25 @@ public sealed class ProbeRegistrationTests(WebApplicationFactory<Program> factor
     }
 
     [Fact]
+    public async Task Two_simultaneous_registrations_cannot_book_the_same_launch_window()
+    {
+        var first = NewRegistration();
+        var second = NewRegistration() with { LaunchWindowOpensAt = first.LaunchWindowOpensAt.AddHours(1) };
+
+        // Les deux passent la validation async (latence simulée) avant que l'une ou l'autre ne soit enregistrée.
+        var responses = await Task.WhenAll(
+            _client.PostAsJsonAsync("/probes", first, Ct),
+            _client.PostAsJsonAsync("/probes", second, Ct));
+
+        Assert.Single(responses, r => r.StatusCode == HttpStatusCode.Created);
+        var refused = Assert.Single(responses, r => r.StatusCode == HttpStatusCode.BadRequest);
+        var problem = await refused.Content.ReadFromJsonAsync<ValidationProblemDto>(Ct);
+        var errors = new Dictionary<string, string[]>(problem!.Errors, StringComparer.OrdinalIgnoreCase);
+        var message = Assert.Single(errors["LaunchWindowOpensAt"]);
+        Assert.StartsWith("La station sol n'est pas disponible sur cette fenêtre de lancement.", message);
+    }
+
+    [Fact]
     public async Task Missing_name_is_refused_in_french()
     {
         var errors = await PostInvalidAsync(NewRegistration() with { Name = "" });
