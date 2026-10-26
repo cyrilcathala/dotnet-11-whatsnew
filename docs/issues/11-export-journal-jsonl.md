@@ -2,6 +2,8 @@
 
 Labels : `ready-for-agent` · Tag : `05-reconcile` (posé à la fin des issues 10 et 11)
 
+Statut : ✅ terminé — fusionné dans `integration/mission-control`
+
 ## Parent
 
 [docs/spec.md](../spec.md)

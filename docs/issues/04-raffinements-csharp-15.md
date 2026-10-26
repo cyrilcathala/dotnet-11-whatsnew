@@ -2,6 +2,8 @@
 
 Labels : `ready-for-agent` · Tag : `03-csharp-sugar`
 
+Statut : ✅ terminé — fusionné dans `integration/mission-control`
+
 ## Parent
 
 [docs/spec.md](../spec.md)
