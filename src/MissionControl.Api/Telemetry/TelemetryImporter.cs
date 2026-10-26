@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipelines;
+using MissionControl.Api.Logbook;
 using MissionControl.Telemetry;
 
 namespace MissionControl.Api.Telemetry;
@@ -30,8 +31,8 @@ public sealed record ImportMeasurements(
     long PeakWorkingSet,
     TimeSpan CpuTime);
 
-/// <summary>Lit les paquets au fil de l'eau et alimente le store par lots.</summary>
-public sealed class TelemetryImporter(TelemetryStore store, AsteroidCatalogStore catalogs) : ITelemetryImporter
+/// <summary>Lit les paquets au fil de l'eau et alimente le store et le journal de bord par lots.</summary>
+public sealed class TelemetryImporter(TelemetryStore store, CrewLogbook logbook, AsteroidCatalogStore catalogs) : ITelemetryImporter
 {
     public const int BatchSize = 1024;
 
@@ -61,12 +62,12 @@ public sealed class TelemetryImporter(TelemetryStore store, AsteroidCatalogStore
 
             if (batch.Count == BatchSize)
             {
-                store.Append(batch);
+                await AppendAsync(batch);
                 batch.Clear();
             }
         }
 
-        store.Append(batch);
+        await AppendAsync(batch);
 
         var duration = stopwatch.Elapsed;
         return new ImportSummary(
@@ -75,5 +76,12 @@ public sealed class TelemetryImporter(TelemetryStore store, AsteroidCatalogStore
             probes.Count,
             duration,
             duration > TimeSpan.Zero ? packets / duration.TotalSeconds : 0);
+    }
+
+    /// <summary>Un lot reçu va au store (état en mémoire) et au journal de bord (sur disque).</summary>
+    private async Task AppendAsync(List<TelemetryPacket> batch)
+    {
+        store.Append(batch);
+        await logbook.AppendAsync(batch);
     }
 }

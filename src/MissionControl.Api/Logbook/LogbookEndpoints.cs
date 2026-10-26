@@ -7,8 +7,11 @@ public static class LogbookEndpoints
 {
     public const string MediaType = "application/jsonl";
 
-    public static IServiceCollection AddLogbook(this IServiceCollection services)
-        => services.AddSingleton<CrewLogbook>();
+    public static IServiceCollection AddLogbook(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<LogbookOptions>(configuration.GetSection("Logbook"));
+        return services.AddSingleton<CrewLogbook>();
+    }
 
     public static IEndpointRouteBuilder MapLogbook(this IEndpointRouteBuilder app)
     {
