@@ -123,5 +123,6 @@ else
         Acknowledged a => ("acknowledged", "Exécutée", $"accusé de réception à {a.ProbeTime.ToLocalTime():T}"),
         Rejected r => ("rejected", "Rejetée", r.Reason),
         TimedOut t => ("timed-out", "Expirée", $"pas de réponse après {t.After.TotalSeconds} s"),
+        ProbeLost l => ("lost", "Sonde perdue", $"dernier contact à {l.LastContact.ToLocalTime():T}"),
     };
 }

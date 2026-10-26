@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using MissionControl.Api.Probes;
 
 namespace MissionControl.Api.Commands;
@@ -12,6 +13,9 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
     public const double MaxRotationFromRest = 90;
     public static readonly TimeSpan RotationDeadline = TimeSpan.FromSeconds(30);
 
+    // Sondes autodétruites, avec l'heure de leur dernier contact.
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _lostProbes = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Envoie la commande ; <c>false</c> si la sonde n'est pas dans la flotte.</summary>
     public bool TrySend(ProbeCommand command, out CommandResult result)
     {
@@ -24,13 +28,15 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
         if (command.Id == Guid.Empty) command = command with { Id = Guid.CreateVersion7() };
 
         // Hiérarchie fermée : les quatre cas suffisent, aucune branche default.
-        result = command switch
-        {
-            Thrust thrust => Execute(thrust),
-            Rotate rotate => Execute(rotate),
-            CapturePhoto photo => Execute(photo),
-            SelfDestruct selfDestruct => Execute(selfDestruct),
-        };
+        result = _lostProbes.TryGetValue(command.ProbeName, out var lastContact)
+            ? new ProbeLost(command.Id, lastContact)
+            : command switch
+            {
+                Thrust thrust => Execute(thrust),
+                Rotate rotate => Execute(rotate),
+                CapturePhoto photo => Execute(photo),
+                SelfDestruct selfDestruct => Execute(selfDestruct),
+            };
 
         history.Record(command, result);
         return true;
@@ -56,10 +62,16 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
             ? new Rejected(photo.Id, "La cible de la photo est obligatoire.")
             : Acknowledge(photo);
 
-    private CommandResult Execute(SelfDestruct selfDestruct) =>
-        string.Equals(selfDestruct.ConfirmationCode, selfDestruct.ProbeName, StringComparison.OrdinalIgnoreCase)
-            ? Acknowledge(selfDestruct)
-            : new Rejected(selfDestruct.Id, "Code de confirmation incorrect : retapez le nom de la sonde.");
+    private CommandResult Execute(SelfDestruct selfDestruct)
+    {
+        if (!string.Equals(selfDestruct.ConfirmationCode, selfDestruct.ProbeName, StringComparison.OrdinalIgnoreCase))
+            return new Rejected(selfDestruct.Id, "Code de confirmation incorrect : retapez le nom de la sonde.");
+
+        // Dernier accusé de réception : ensuite, la sonde est perdue.
+        var farewell = Acknowledge(selfDestruct);
+        _lostProbes[selfDestruct.ProbeName] = farewell.ProbeTime;
+        return farewell;
+    }
 
     private Acknowledged Acknowledge(ProbeCommand command) => new(command.Id, clock.GetUtcNow());
 }
