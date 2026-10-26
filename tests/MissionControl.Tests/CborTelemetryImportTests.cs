@@ -77,6 +77,28 @@ public sealed class CborTelemetryImportTests
         Assert.Equal([-12.5, "nominal", true], packets.Select(p => p.Value.Value));
     }
 
+    [Theory]
+    [InlineData("""-12.5""", -12.5)]
+    [InlineData("""
+        "ok"
+        """, "ok")]
+    [InlineData("""true""", true)]
+    public async Task A_single_packet_posted_as_json_keeps_its_sensor_value_kind(string jsonValue, object expected)
+    {
+        await using var api = new WebApplicationFactory<Program>();
+        using var client = api.CreateClient();
+        var body = $$"""{"probe":"Juno","seq":0,"at":"2026-11-17T08:00:00+00:00","sensor":"status","value":{{jsonValue}}}""";
+
+        // Minimal APIs : options JSON « web », où un nombre peut être lu depuis une chaîne.
+        var response = await client.PostAsync(
+            "/telemetry/packets", new StringContent(body, Encoding.UTF8, "application/json"), Ct);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var window = await client.GetFromJsonAsync<JsonElement>("/telemetry/probes/Juno/launch", Ct);
+        var packet = window.GetProperty("packets")[0].Deserialize<TelemetryPacket>(JsonSerializerOptions.Default)!;
+        Assert.Equal(expected, packet.Value.Value);
+    }
+
     /// <summary>Importe dans une API neuve, puis relève l'état observable (tableau de bord et débuts de vol).</summary>
     private static async Task<string> ImportAndObserveAsync(HttpContent content)
     {

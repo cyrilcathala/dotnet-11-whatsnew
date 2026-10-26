@@ -20,6 +20,7 @@ public static class TelemetryEndpoints
         var telemetry = app.MapGroup("/telemetry").WithTags("Télémétrie");
 
         telemetry.MapPost("/import", ImportAsync).DisableAntiforgery();
+        telemetry.MapPost("/packets", AppendPacket).DisableAntiforgery();
         telemetry.MapGet("/", (TelemetryStore store) => store.GetStatus());
         telemetry.MapGet("/probes/{probe}/launch", GetLaunchWindow);
 
@@ -48,6 +49,13 @@ public static class TelemetryEndpoints
         }
 
         return TypedResults.Ok(await importer.ImportAsync(context.Request.BodyReader, format, cancellationToken));
+    }
+
+    /// <summary>Un relevé isolé, posté en JSON (body lié par Minimal APIs).</summary>
+    private static NoContent AppendPacket(TelemetryPacket packet, TelemetryStore store)
+    {
+        store.Append([packet]);
+        return TypedResults.NoContent();
     }
 
     /// <summary>Les premières minutes de vol d'une sonde, extraites de son enregistrement de début de vol.</summary>
