@@ -35,8 +35,10 @@ public sealed class CrewLogbook : IDisposable
 
     public CrewLogbook(IOptions<LogbookOptions> options)
     {
-        var root = options.Value.Directory is { Length: > 0 } configured ? configured : Path.GetTempPath();
-        _directory = Path.Combine(root, "mission-control", $"logbook-{Environment.ProcessId}-{Guid.NewGuid():N}");
+        var root = Path.Combine(
+            options.Value.Directory is { Length: > 0 } configured ? configured : Path.GetTempPath(), "mission-control");
+        DeleteOrphans(root);
+        _directory = Path.Combine(root, $"logbook-{Environment.ProcessId}-{Guid.NewGuid():N}");
         System.IO.Directory.CreateDirectory(_directory);
         _path = Path.Combine(_directory, "journal-de-bord.jsonl");
 
@@ -120,9 +122,53 @@ public sealed class CrewLogbook : IDisposable
         _json.Dispose();
         _file.Dispose();
         _gate.Dispose();
+        TryDelete(_directory);
+    }
+
+    /// <summary>
+    /// Supprime les journaux laissés par une station arrêtée brutalement (processus disparu) :
+    /// le dossier porte le numéro du processus qui l'a créé.
+    /// </summary>
+    private static void DeleteOrphans(string root)
+    {
+        if (!System.IO.Directory.Exists(root))
+        {
+            return;
+        }
+
+        foreach (var directory in System.IO.Directory.EnumerateDirectories(root, "logbook-*"))
+        {
+            var parts = Path.GetFileName(directory).Split('-');
+            if (parts.Length == 3 && int.TryParse(parts[1], out var processId) && !IsRunning(processId))
+            {
+                TryDelete(directory);
+            }
+        }
+    }
+
+    private static bool IsRunning(int processId)
+    {
         try
         {
-            System.IO.Directory.Delete(_directory, recursive: true);
+            using var process = System.Diagnostics.Process.GetProcessById(processId);
+            return !process.HasExited;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // Processus d'un autre utilisateur : dans le doute, on n'y touche pas.
+            return true;
+        }
+    }
+
+    private static void TryDelete(string directory)
+    {
+        try
+        {
+            System.IO.Directory.Delete(directory, recursive: true);
         }
         catch (IOException)
         {
