@@ -1,11 +1,13 @@
 using MissionControl.Api;
 using MissionControl.Api.Components;
+using MissionControl.Api.Probes;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 builder.Services.AddSingleton<MissionStore>();
+builder.Services.AddProbes();
 
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
 {
@@ -28,6 +30,7 @@ app.UseHttpsRedirection();
 
 app.MapDefaultEndpoints();
 app.MapOpenApi();
+app.MapProbes();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
