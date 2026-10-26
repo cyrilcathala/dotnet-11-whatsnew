@@ -3,17 +3,36 @@
 
 <PageTitle>Mission Control</PageTitle>
 
-<h1>Bienvenue au centre de contrôle de mission 🚀</h1>
+<section class="launch @(_secondsLeft == 0 ? "lifted" : null)">
+    <div class="intro">
+        <h1>Bienvenue au centre de contrôle de mission</h1>
+        <p>Ici, on enregistre des sondes, on leur envoie des commandes et on suit leur <a href="telemetrie">télémétrie</a>.</p>
+    </div>
 
-<p>Ici, on enregistre des sondes, on leur envoie des commandes et on suit leur <a href="telemetrie">télémétrie</a>.</p>
-
-<section class="countdown">
-    <p role="status">@CountdownLabel</p>
-    <button class="btn" @onclick="Tick" disabled="@(_secondsLeft == 0)">Compte à rebours</button>
+    <div class="countdown">
+        <p class="clock" role="status">@CountdownLabel</p>
+        <ol class="sequence" aria-hidden="true">
+            @for (var second = Start; second > 0; second--)
+            {
+                <li class="@(second > _secondsLeft ? "elapsed" : null)"></li>
+            }
+        </ol>
+        <button class="btn" @onclick="Tick" disabled="@(_secondsLeft == 0)">Compte à rebours</button>
+    </div>
 </section>
 
+<nav class="stations" aria-label="Stations de la mission">
+    <a href="sondes"><strong>Flotte</strong><span>Enregistrer une sonde et sa fenêtre de lancement.</span></a>
+    <a href="commandes"><strong>Commandes</strong><span>Poussée, rotation, photo… ou autodestruction.</span></a>
+    <a href="telemetrie"><strong>Télémétrie</strong><span>Suivre l'ingestion des paquets en direct.</span></a>
+    <a href="banc-d-essai"><strong>Banc d'essai</strong><span>Comparer formats et compressions, mesure par mesure.</span></a>
+    <a href="rapport"><strong>Rapport</strong><span>Apparier commandes et accusés de réception.</span></a>
+</nav>
+
 @code {
-    private int _secondsLeft = 10;
+    private const int Start = 10;
+
+    private int _secondsLeft = Start;
 
     private string CountdownLabel => _secondsLeft == 0 ? "Décollage !" : $"T-{_secondsLeft}";
 

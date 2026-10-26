@@ -3,13 +3,17 @@
 
 <PageTitle>Erreur</PageTitle>
 
-<h1 class="text-danger">Erreur.</h1>
-<h2 class="text-danger">Une erreur s'est produite pendant le traitement de votre requête.</h2>
+<header class="page-head">
+    <div>
+        <h1>Erreur</h1>
+        <p>Une erreur s'est produite pendant le traitement de votre requête.</p>
+    </div>
+</header>
 
 @if (ShowRequestId)
 {
-    <p>
-        <strong>Identifiant de requête :</strong> <code>@RequestId</code>
+    <p class="banner tone-abort">
+        <strong>Identifiant de requête</strong> <code>@RequestId</code>
     </p>
 }
 

@@ -6,43 +6,50 @@
 
 <PageTitle>Rapport — Mission Control</PageTitle>
 
-<h1>Rapport de mission</h1>
-
-<p>
-    <button class="btn" @onclick="Refresh">Actualiser</button>
-</p>
+<header class="page-head">
+    <div>
+        <h1>Rapport de mission</h1>
+        <p>Les commandes envoyées, appariées aux accusés de réception renvoyés par les sondes.</p>
+    </div>
+    <button class="btn secondary" @onclick="Refresh">Actualiser</button>
+</header>
 
 @if (_lines is [])
 {
-    <p>Aucune commande ni aucun accusé de réception : <a href="commandes">envoyez une commande</a>.</p>
+    <p class="empty">Aucune commande ni aucun accusé de réception : <a href="commandes">envoyez une commande</a>.</p>
 }
 else
 {
-    <ul class="summary">
+    <ul class="readouts">
         @foreach (var category in Enum.GetValues<ReportCategory>())
         {
-            var (css, label) = Describe(category);
-            <li class="@css"><strong>@_lines.Count(l => l.Category == category)</strong> @label</li>
+            var (tone, label) = Describe(category);
+            <li class="readout @tone">
+                <span class="readout-label status">@label</span>
+                <span class="readout-value">@_lines.Count(l => l.Category == category)</span>
+            </li>
         }
     </ul>
 
-    <table>
-        <thead>
-            <tr><th>Catégorie</th><th>Sonde</th><th>Commande</th><th>Accusé de réception</th></tr>
-        </thead>
-        <tbody>
-            @foreach (var line in _lines)
-            {
-                var (css, label) = Describe(line.Category);
-                <tr>
-                    <td class="@css">@label</td>
-                    <td>@line.ProbeName</td>
-                    <td>@(line.Command is { } command ? Describe(command) : "—")</td>
-                    <td>@(line.Acknowledgement is { } ack ? Describe(ack) : "—")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll lines">
+        <table>
+            <thead>
+                <tr><th>Catégorie</th><th>Sonde</th><th>Commande</th><th>Accusé de réception</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var line in _lines)
+                {
+                    var (tone, label) = Describe(line.Category);
+                    <tr>
+                        <td><span class="status @tone">@label</span></td>
+                        <td>@line.ProbeName</td>
+                        <td>@(line.Command is { } command ? Describe(command) : "—")</td>
+                        <td>@(line.Acknowledgement is { } ack ? Describe(ack) : "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
@@ -52,11 +59,11 @@ else
 
     private void Refresh() => _lines = MissionReport.Build();
 
-    private static (string Css, string Label) Describe(ReportCategory category) => category switch
+    private static (string Tone, string Label) Describe(ReportCategory category) => category switch
     {
-        ReportCategory.Matched => ("matched", "Appariée"),
-        ReportCategory.Unacknowledged => ("unacknowledged", "Commande sans accusé"),
-        ReportCategory.Orphan => ("orphan", "Accusé orphelin"),
+        ReportCategory.Matched => ("tone-nominal", "Appariée"),
+        ReportCategory.Unacknowledged => ("tone-caution", "Commande sans accusé"),
+        ReportCategory.Orphan => ("tone-orphan", "Accusé orphelin"),
         _ => throw new ArgumentOutOfRangeException(nameof(category)),
     };
 
