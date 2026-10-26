@@ -47,6 +47,8 @@ Le simulateur se lance aussi à la main :
 dotnet run --project tools/ProbeSimulator -- --format jsonl --compression none --count 1000000 --seed 42 --url http://localhost:5011
 ```
 
+`--format json` envoie à la place le catalogue d'astéroïdes, un seul document JSON qui embarque les mêmes relevés ; le catalogue importé se consulte via `GET /telemetry/catalog`.
+
 ### Lancer les tests
 
 ```bash
