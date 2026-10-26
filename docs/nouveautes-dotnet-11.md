@@ -2,7 +2,7 @@
 
 Liste de référence pour le slide récapitulatif de fin de démo. Tenue à jour au fil des décisions.
 
-Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouveau) · ❓ à confirmer pendant l'implémentation
+Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouveau) · ⚠️ écart ou piège constaté sur la RC3 · ℹ️ précision
 
 ## 00 — Lancement
 - 🆕 `dotnet watch` intégré à l'AppHost Aspire (SDK 11) : vérifié sur la RC3 avec Aspire 13.6.4, une modification de `Home.razor` dans l'API est appliquée à chaud (« C# and Razor changes applied »)
@@ -107,15 +107,15 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - ⚠️ `Exception.ToString()` est déjà nettoyé depuis .NET Core 2.1 et reste identique : la différence se montre avec la pile réelle (`new StackTrace()`) capturée au moment de la panne
   - ℹ️ BenchmarkDotNet 0.15.8 ne connaît pas .NET 11 : `0.16.0-preview.2` (`RuntimeMoniker.Net11_0`)
 
-## Bonus en rafale
+## 07 à 10 — Bonus en rafale
+- 🆕 C# 15 : `break` / `continue` labellisés (tag `07-labeled-break`) — la station sol propose la prochaine fenêtre de lancement libre quand celle demandée est prise (`GroundStation.FindNextFreeWindow`) : la fenêtre revient chaque jour à la même heure, `nextDay: for (...)` sur les jours, `foreach` sur la flotte, `continue nextDay;` dès qu'une sonde occupe le créneau, sans drapeau booléen ni `goto`
+  - Visible dans le message de validation de `POST /probes` et du formulaire : « … Prochaine fenêtre libre : 2030-01-09 01:00 → 2030-01-09 07:00. »
 - 🆕 `EqualityComparer<T>.Create(keySelector)` (tag `08-equality-comparer`) — un paquet retransmis (même séquence, même capteur) n'est inscrit qu'une fois dans l'enregistrement du début de vol : `HashSet<TelemetryPacket>` construit avec `EqualityComparer<TelemetryPacket>.Create(p => (p!.Sequence, p.Sensor))`, au lieu d'une classe `IEqualityComparer<T>` écrite à la main. Réimporter le journal de bord dans la même station ne duplique pas l'enregistrement du début de vol (le journal de bord, lui, consigne chaque réception)
   - ⚠️ Le paramètre du sélecteur est annoté nullable : `p => p.Sequence` donne CS8602 (erreur avec `TreatWarningsAsErrors`), d'où `p!`
   - ℹ️ Les compteurs de paquets (`GET /telemetry`) comptent toujours tout ce qui est reçu, retransmissions comprises : seule la mémoire bornée de l'enregistrement est dédupliquée
-- 🆕 C# 15 : `break` / `continue` labellisés (tag `07-labeled-break`) — la station sol propose la prochaine fenêtre de lancement libre quand celle demandée est prise (`GroundStation.FindNextFreeWindow`) : la fenêtre revient chaque jour à la même heure, `nextDay: for (...)` sur les jours, `foreach` sur la flotte, `continue nextDay;` dès qu'une sonde occupe le créneau, sans drapeau booléen ni `goto`
-  - Visible dans le message de validation de `POST /probes` et du formulaire : « … Prochaine fenêtre libre : 2030-01-09 01:00 → 2030-01-09 07:00. »
 - 🆕 `Process` : helpers run-and-capture (tag `09-process`) — `GET /mission/diagnostic` renvoie le runtime de l'API et le SDK installé sur la station sol : `await Process.RunAndCaptureTextAsync("dotnet", ["--version"], ct)` lance le processus, attend sa fin et rend `StandardOutput`, `StandardError` et `ExitStatus.ExitCode` en un appel, sans `ProcessStartInfo`, ni `RedirectStandardOutput`, ni `WaitForExitAsync`
   - ℹ️ Existent aussi : `Process.RunAndCaptureText` (synchrone, avec timeout), `Process.Run` / `RunAsync` (code de sortie seul, `silent: true` pour ne rien afficher), et sur une instance `ReadAllLinesAsync` (lignes stdout/stderr entrelacées) et `WaitForExitStatusAsync`
 - 🆕 File-based apps : `#:include`, `dotnet run -e` (tag `10-file-based-apps`) — `tools/diagnostic/mission-diagnostic.cs`, script sans `.csproj` et hors de la solution, qui interroge l'API (`/mission/diagnostic`, `/probes`, `/telemetry`, `/mission/report`) ; `#:include MissionApi.cs` ajoute le client HTTP à la compilation ; `dotnet run tools/diagnostic/mission-diagnostic.cs -e MISSION_API_URL=https://localhost:7269` lui passe l'adresse de l'API (vérifié sur la RC3)
   - ⚠️ Le script commence par `#!/usr/bin/env dotnet`, sinon avertissement CA2266 (erreur ici : le `Directory.Build.props` du dépôt, avec `TreatWarningsAsErrors`, s'applique aussi aux file-based apps)
   - ⚠️ Réglages compatibles AOT par défaut : la sérialisation JSON par réflexion est désactivée, le script lit les réponses en `JsonElement`
-- 🆕 Templates de tests en xUnit v3 sur Microsoft.Testing.Platform, affichage live de `dotnet test`
+- 🆕 Templates de tests en xUnit v3 sur Microsoft.Testing.Platform, affichage live de `dotnet test` (rappel du chapitre 00, en conclusion)
