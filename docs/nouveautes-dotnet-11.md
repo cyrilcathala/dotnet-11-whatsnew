@@ -73,17 +73,18 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - Octets réseau : middleware `UseImportTraffic()` placé **avant** `UseRequestDecompression()`, qui enveloppe le body compressé d'un flux compteur et note le `Content-Encoding` (retiré ensuite par le middleware natif). Octets payload : `PipeReader` compteur passé au lecteur de format, après décompression. Un body non compressé n'est pas enveloppé (le `PipeReader` natif de Kestrel est conservé) : octets réseau = octets payload
   - Métriques `System.Diagnostics.Metrics` (meter `MissionControl.Telemetry`, histogrammes `mission_control.import.*` tagués `format` et `compression`), exportées vers le dashboard Aspire par `AddMeter("MissionControl.*")`
   - Simulateur `--format all --compression both` : les 6 combinaisons en séquence, même graine (ressource Aspire `bench`)
-  - Mesuré à la main (Release, HTTP/1.1, 1 million de paquets, graine 42) :
+  - Mesuré à la main (Release, HTTP/1.1, 1 million de paquets, graine 42, écriture du journal de bord comprise) :
 
     | Format | Compression | Réseau | Payload | Taux | Allocations | Pic WS | CPU | Durée | Débit (paquets/s) |
     |---|---|---|---|---|---|---|---|---|---|
-    | json | none | 100,7 Mo | 100,7 Mo | 100 % | 347,1 Mo | 372,6 Mo | 3,55 s | 2,47 s | 404 342 |
-    | json | zstd | 9,9 Mo | 100,7 Mo | 10 % | 346,3 Mo | 506,4 Mo | 1,84 s | 1,08 s | 927 887 |
-    | jsonl | none | 100,7 Mo | 100,7 Mo | 100 % | 329,8 Mo | 517,2 Mo | 1,69 s | 0,97 s | 1 029 870 |
-    | jsonl | zstd | 9,9 Mo | 100,7 Mo | 10 % | 329,6 Mo | 492,7 Mo | 1,12 s | 0,94 s | 1 058 627 |
-    | cbor | none | 79,4 Mo | 79,4 Mo | 100 % | 403,3 Mo | 490,2 Mo | 1,78 s | 1,53 s | 655 302 |
-    | cbor | zstd | 10,4 Mo | 79,4 Mo | 13 % | 401,1 Mo | 438,2 Mo | 1,52 s | 1,32 s | 759 759 |
+    | json | none | 100,7 Mo | 100,7 Mo | 100 % | 374,1 Mo | 391,8 Mo | 4,64 s | 3,28 s | 305 013 |
+    | json | zstd | 9,9 Mo | 100,7 Mo | 10 % | 370,6 Mo | 465,7 Mo | 2,17 s | 1,44 s | 693 547 |
+    | jsonl | none | 100,7 Mo | 100,7 Mo | 100 % | 354,1 Mo | 387,3 Mo | 2,22 s | 1,33 s | 749 310 |
+    | jsonl | zstd | 9,9 Mo | 100,7 Mo | 10 % | 353,9 Mo | 308,9 Mo | 1,50 s | 1,26 s | 790 847 |
+    | cbor | none | 79,4 Mo | 79,4 Mo | 100 % | 425,7 Mo | 302,1 Mo | 2,64 s | 1,97 s | 506 991 |
+    | cbor | zstd | 10,4 Mo | 79,4 Mo | 13 % | 425,4 Mo | 294,3 Mo | 2,02 s | 1,67 s | 599 233 |
 
+  - ℹ️ Chaque import écrit aussi ses paquets dans le journal de bord sur disque (chapitre 05) : même coût pour les 6 lignes, la comparaison reste équitable, mais les valeurs absolues incluent cette écriture (les mesures précédentes, sans journal, donnaient par exemple jsonl/none en 0,97 s et 1 029 870 paquets/s ; 1,33 s et 749 310 paquets/s avec)
   - ⚠️ Mesures sur tout le processus : le pic de working set d'un import hérite du tas laissé par le précédent (le GC ne rend pas la mémoire tout de suite), seul le premier import part d'un processus « froid ». Le premier import (json) paie aussi le JIT
 
 ## 05 — Rapport de mission
@@ -93,7 +94,10 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - Scénario de démo : une photo (appariée), une rotation de 170° (expirée → commande sans accusé), et au premier contact chaque sonde envoie un accusé spontané (orphelin) ; une commande à une sonde autodétruite reste aussi sans accusé
 - 🆕 `JsonSerializer.SerializeAsyncEnumerable` vers un `PipeWriter`, sortie JSON Lines (`topLevelValues: true`)
   - `GET /logbook/export` (`LogbookEndpoints`) : `SerializeAsyncEnumerable(Response.BodyWriter, logbook.ReadAsync(ct), typeInfo, topLevelValues: true, ct)` → `application/jsonl`, un document compact par entrée terminé par LF (y compris la dernière), sans tableau englobant ; vérifié par test
-  - ℹ️ Le journal de bord = les paquets conservés par la station (enregistrement de début de vol de chaque sonde), parcourus sonde par sonde : même contrat JSON que l'import, l'export se réimporte tel quel
+  - ℹ️ Le journal de bord = tous les paquets reçus par import, dans l'ordre de réception, ajoutés lot par lot (quel que soit le format) à un fichier JSONL append-only dans un dossier temporaire propre à l'instance (`CrewLogbook`), supprimé à l'arrêt : même contrat JSON (`TelemetryJsonContext`) que l'import, l'export se réimporte tel quel. Après un import d'1 million de paquets, l'export contient bien 1 million de lignes (avant, seulement l'enregistrement de début de vol : 4096 paquets par sonde)
+  - 🔁 Rappel .NET 10 : l'export relit le fichier en flux avec `JsonSerializer.DeserializeAsyncEnumerable(stream, typeInfo, topLevelValues: true, ct)` et le réécrit aussitôt avec `SerializeAsyncEnumerable` : le journal n'est jamais entièrement en mémoire
+  - ℹ️ Export pendant un import : l'export lit le fichier jusqu'à la longueur des lots complets connue à son début (chaque lot est écrit et vidé sous verrou) ; il ne contient que des lignes entières
+  - ℹ️ `POST /telemetry/packets` (un relevé isolé) alimente le store mais pas le journal, réservé aux imports
   - ℹ️ La surcharge `PipeWriter` ne complète pas le writer : inutile ici, ASP.NET Core complète `Response.BodyWriter` à la fin de la requête
 
 ## 06 — « Houston, on a un problème »

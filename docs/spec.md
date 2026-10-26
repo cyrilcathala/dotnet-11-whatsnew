@@ -111,7 +111,8 @@ Une application de **centre de contrôle de mission spatiale** : on enregistre d
 - **Ingestion de télémétrie** : une interface étroite « lire un flux de paquets depuis un `PipeReader` » avec trois implémentations (JSON, JSONL, CBOR), choisies d'après le `Content-Type`.
 - **Instrumentation d'import** : enveloppe l'ingestion, compte les octets avant et après décompression, mesure allocations, working set, CPU, durée et débit, publie des métriques OTel et conserve les derniers résultats pour la page « Banc d'essai ».
 - **Rapport de mission** : rapproche commandes et accusés par un `FullJoin` et classe chaque ligne.
-- **Export du journal de bord** : diffuse le journal en JSONL directement dans le `PipeWriter` de la réponse.
+- **Journal de bord** : chaque lot de paquets importé (quel que soit le format) est ajouté, dans l'ordre de réception, à un fichier JSON Lines append-only sur disque, dans un dossier temporaire propre à l'instance de l'application (configurable, supprimé à l'arrêt ; celui d'une instance tuée est supprimé au démarrage suivant). L'enregistrement de début de vol (4096 premiers paquets par sonde) reste en mémoire pour la fenêtre temporelle `packets[from, to]`, mais n'alimente plus l'export.
+- **Export du journal de bord** : relit le fichier du journal en flux (`DeserializeAsyncEnumerable`, `topLevelValues: true`) et le diffuse en JSONL directement dans le `PipeWriter` de la réponse ; le journal n'est jamais entièrement en mémoire. Un export lancé pendant un import s'arrête à la longueur des lots complets écrits au moment où il commence : uniquement des lignes entières.
 
 ### Modèle de domaine (forme des types)
 - Commandes : une **closed hierarchy** dont la racine porte l'identifiant de la commande et le nom de la sonde ; cas `Thrust` (delta-V), `Rotate` (attitude cible), `CapturePhoto` (cible), `SelfDestruct` (code de confirmation).
@@ -138,6 +139,7 @@ Une application de **centre de contrôle de mission spatiale** : on enregistre d
 - Octets réseau : compteur sur le body brut, avant décompression. Octets du payload : compteur après décompression.
 - Allocations : delta de `GC.GetTotalAllocatedBytes(precise: true)`. Pic de working set : échantillonnage périodique pendant l'import. CPU : delta de `Process.TotalProcessorTime`.
 - Les mesures portent sur tout le processus : le banc d'essai impose des imports séquentiels, et on le dit au public.
+- Chaque import écrit aussi le journal de bord sur disque, quel que soit le format : le coût est le même pour les 6 combinaisons, la comparaison reste équitable, mais les valeurs absolues l'incluent. La page « Banc d'essai » le signale.
 - Exposition via `System.Diagnostics.Metrics` (histogrammes tagués `format` et `compression`) et via un résumé consultable par la page « Banc d'essai ».
 
 ### UI
@@ -170,13 +172,14 @@ Une application de **centre de contrôle de mission spatiale** : on enregistre d
   - `POST /probes` : un nom déjà pris avec une casse différente, ou réservé, et une fenêtre de lancement indisponible renvoient des erreurs de validation en français.
   - `GET /mission/report` : chaque catégorie (appariée, commande sans accusé, accusé orphelin) apparaît pour un scénario construit via l'API.
   - `GET /logbook/export` : une ligne JSON valide par entrée, chaque ligne terminée par LF, aucun tableau englobant.
+  - `GET /logbook/export` après un import de N paquets (JSONL et CBOR) : exactement N lignes, dans l'ordre de réception, réimportables ; body vide quand rien n'a été importé ; lignes entières pendant un import ; aucun fichier laissé sur disque à l'arrêt.
 - **Non testés** : UI Blazor, simulateur (sauf sa bibliothèque de formats, exercée via l'API), outil de comparaison Runtime Async, valeurs numériques du banc d'essai.
 - **Prior art** : aucun, le repo est vide. Ces tests établiront le modèle.
 - **Rôle** : filet de sécurité pour la bascule RC3 → GA, lancé avant chaque répétition.
 
 ## Out of Scope
 
-- EF Core, base de données, persistance durable.
+- EF Core, base de données, persistance durable (le fichier du journal de bord est temporaire : il disparaît avec l'instance).
 - Authentification et autorisation.
 - Déploiement, conteneurisation, CI/CD.
 - Vector search, full-text search, composants Blazor AI, `Decimal32/64/128`, SIMD, cryptographie (ML-KEM, X25519), memory safety (preview).

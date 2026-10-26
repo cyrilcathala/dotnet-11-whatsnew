@@ -60,7 +60,9 @@ Le lien **Exporter le journal de bord (JSONL)** de la page Télémétrie téléc
 curl http://localhost:5011/logbook/export -o journal-de-bord.jsonl
 ```
 
-Une entrée par ligne (les paquets conservés pour chaque sonde), au même format que l'import : le fichier se réimporte tel quel avec `POST /telemetry/import`.
+Une ligne par paquet reçu par import, dans l'ordre de réception et quel que soit le format d'origine (JSON, JSONL, CBOR), au même format que l'import JSONL : le fichier se réimporte tel quel avec `POST /telemetry/import`. Après le million de paquets du simulateur, l'export contient un million de lignes.
+
+Pendant chaque import, l'API ajoute les paquets lot par lot à un fichier JSONL sur disque ; l'export relit ce fichier en flux, sans jamais charger le journal en mémoire. Le fichier vit dans un sous-dossier propre à l'instance, sous le dossier temporaire du système (autre racine : `Logbook__Directory=D:\journaux`), et disparaît à l'arrêt de l'API (celui d'une API tuée est supprimé au démarrage suivant). Un export lancé pendant un import contient les lots déjà écrits à son début.
 
 ### Lancer les tests
 
