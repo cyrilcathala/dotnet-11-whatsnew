@@ -5,7 +5,10 @@ Liste de référence pour le slide récapitulatif de fin de démo. Tenue à jour
 Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouveau) · ❓ à confirmer pendant l'implémentation
 
 ## 00 — Lancement
-- 🆕 `dotnet watch` intégré à l'AppHost Aspire (SDK 11)
+- 🆕 `dotnet watch` intégré à l'AppHost Aspire (SDK 11) : vérifié sur la RC3 avec Aspire 13.6.4, une modification de `Home.razor` dans l'API est appliquée à chaud (« C# and Razor changes applied »)
+- 🆕 Template `xunit` du SDK 11 avec `--xunit-version v3` : xUnit v3 sur Microsoft.Testing.Platform (`global.json` → `"test": { "runner": "Microsoft.Testing.Platform" }`)
+  - ⚠️ Écart constaté sur la RC3 : le template `xunit` génère encore xUnit **v2** par défaut ; il faut passer `--xunit-version v3`
+- ℹ️ Aspire 13.6 émet l'avertissement `ASPIRE010` quand l'AppHost est lancé sans la CLI Aspire (`AspireUseCliBundle=false`) ; supprimé dans le `.csproj` de l'AppHost pour garder un build sans warning
 
 ## 01 — Enregistrer une sonde
 - 🆕 Validation async : `AsyncValidationAttribute`, `IAsyncValidatableObject`, `Validator.ValidateObjectAsync`
