@@ -1,49 +1,44 @@
-.gauges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-block: 1rem 2rem;
+.readouts {
+    margin-block-end: 2rem;
 }
 
-.gauge {
-    display: flex;
-    flex-direction: column;
-    min-width: 12rem;
-    padding: 1rem 1.25rem;
-    border: 1px solid #d0d7de;
-    border-radius: 0.5rem;
+/* Voyant « en direct » : ne pulse que si au moins une sonde émet. */
+.live::before {
+    content: "";
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-inline-end: 0.5rem;
+    border-radius: 50%;
+    background: var(--nominal);
+    animation: pulse 1.6s var(--ease-out) infinite;
 }
 
-.gauge .label {
-    color: #57606a;
-    font-size: 0.875rem;
-}
-
-.gauge .value {
-    font-size: 2rem;
+.name {
     font-weight: 600;
-    font-variant-numeric: tabular-nums;
 }
 
-.gauge small {
-    font-size: 0.875rem;
-    font-weight: 400;
-    color: #57606a;
+.probes tr.active .name::before {
+    content: "";
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-inline-end: 0.6rem;
+    border-radius: 50%;
+    background: var(--nominal);
+    vertical-align: 0.1em;
 }
 
-.probes {
-    border-collapse: collapse;
-    font-variant-numeric: tabular-nums;
+.probes tr:not(.active) td {
+    color: var(--ink-3);
 }
 
-.probes th,
-.probes td {
-    padding: 0.4rem 0.9rem;
-    border-bottom: 1px solid #d0d7de;
-    text-align: start;
-}
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 color-mix(in oklch, var(--nominal) 60%, transparent);
+    }
 
-.probes tr.active td:first-child::before {
-    content: "● ";
-    color: #1a7f37;
+    100% {
+        box-shadow: 0 0 0 0.6rem transparent;
+    }
 }

@@ -1,21 +1,24 @@
 .caveat {
-    max-width: 60rem;
-    padding: 0.75rem 1rem;
-    border-inline-start: 4px solid #bf8700;
-    background: #fff8c5;
+    flex-direction: column;
+    max-width: 72ch;
 }
 
 .bench {
-    border-collapse: collapse;
-    font-variant-numeric: tabular-nums;
     margin-block-start: 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
 }
 
 .bench th,
 .bench td {
-    padding: 0.4rem 0.9rem;
-    border-bottom: 1px solid #d0d7de;
+    padding-inline: 0.75rem;
     text-align: end;
+}
+
+.bench th {
+    white-space: normal;
+    vertical-align: bottom;
 }
 
 .bench th:nth-child(-n + 2),
@@ -23,8 +26,14 @@
     text-align: start;
 }
 
+.bench td:first-child {
+    font-weight: 700;
+    color: var(--ink);
+}
+
 .bench .pending {
-    color: #57606a;
+    color: var(--ink-3);
+    font-family: var(--font-ui);
     font-style: italic;
     text-align: start;
 }

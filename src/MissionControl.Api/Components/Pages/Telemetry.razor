@@ -8,52 +8,59 @@
 
 <PageTitle>Télémétrie — Mission Control</PageTitle>
 
-<h1>Télémétrie 📡</h1>
+<header class="page-head">
+    <div>
+        <h1>Télémétrie</h1>
+        <p>Les paquets envoyés par le simulateur, ingérés en flux et agrégés par sonde.</p>
+    </div>
+</header>
 
-<section class="gauges" aria-live="polite">
-    <div class="gauge">
-        <span class="label">Paquets reçus</span>
-        <span class="value">@_status.Packets.ToString("N0")</span>
-    </div>
-    <div class="gauge">
-        <span class="label">Débit</span>
-        <span class="value">@_packetsPerSecond.ToString("N0") <small>paquets/s</small></span>
-    </div>
-    <div class="gauge">
-        <span class="label">Sondes actives</span>
-        <span class="value">@ActiveProbes <small>/ @_status.Probes.Count</small></span>
-    </div>
-</section>
+<ul class="readouts" aria-live="polite">
+    <li class="readout">
+        <span class="readout-label">Paquets reçus</span>
+        <span class="readout-value">@_status.Packets.ToString("N0")</span>
+    </li>
+    <li class="readout">
+        <span class="readout-label">Débit</span>
+        <span class="readout-value">@_packetsPerSecond.ToString("N0") <small>paquets/s</small></span>
+    </li>
+    <li class="readout">
+        <span class="readout-label @(ActiveProbes > 0 ? "live" : null)">Sondes actives</span>
+        <span class="readout-value">@ActiveProbes <small>/ @_status.Probes.Count</small></span>
+    </li>
+</ul>
 
 @if (_status.Probes.Count == 0)
 {
-    <p>Aucune télémétrie reçue pour l'instant. Lancez le simulateur depuis le dashboard Aspire.</p>
+    <p class="empty waiting">Aucune télémétrie reçue pour l'instant. Lancez le simulateur depuis le dashboard Aspire.</p>
 }
 else
 {
-    <table class="probes">
-        <thead>
-            <tr>
-                <th>Sonde</th>
-                <th>Paquets</th>
-                <th>Dernière mesure</th>
-                <th>Heure de bord</th>
-                <th>5 premières minutes de vol</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var probe in _status.Probes)
-            {
-                <tr class="@(IsActive(probe) ? "active" : null)">
-                    <td>@probe.Name</td>
-                    <td>@probe.Packets.ToString("N0")</td>
-                    <td>@probe.LastValue</td>
-                    <td>@probe.LastAt.ToString("dd/MM HH:mm:ss")</td>
-                    <td>@_launchWindows.GetValueOrDefault(probe.Name).ToString("N0") paquets</td>
+    <div class="table-scroll probes">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sonde</th>
+                    <th class="num">Paquets</th>
+                    <th>Dernière mesure</th>
+                    <th>Heure de bord</th>
+                    <th class="num">5 premières minutes de vol</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var probe in _status.Probes)
+                {
+                    <tr class="@(IsActive(probe) ? "active" : null)">
+                        <td class="name">@probe.Name</td>
+                        <td class="num">@probe.Packets.ToString("N0")</td>
+                        <td class="mono">@probe.LastValue</td>
+                        <td class="mono">@probe.LastAt.ToString("dd/MM HH:mm:ss")</td>
+                        <td class="num">@_launchWindows.GetValueOrDefault(probe.Name).ToString("N0") paquets</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

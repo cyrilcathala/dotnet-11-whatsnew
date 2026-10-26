@@ -6,56 +6,64 @@
 
 <PageTitle>Banc d'essai — Mission Control</PageTitle>
 
-<h1>Banc d'essai 🧪</h1>
+<header class="page-head">
+    <div>
+        <h1>Banc d'essai</h1>
+        <p>Chaque import est mesuré par format et par compression, avec la même graine de génération.</p>
+    </div>
+</header>
 
-<p class="caveat">
-    ⚠️ Les mesures portent sur <strong>tout le processus</strong> (allocations, working set, CPU) :
+<p class="banner tone-caution caveat">
+    <strong>Attention</strong>
+    <span>Les mesures portent sur <strong>tout le processus</strong> (allocations, working set, CPU) :
     les imports du banc sont lancés <strong>en séquence</strong>, jamais en parallèle.
-    Lancez <code>ProbeSimulator --format all --compression both</code> pour remplir les 6 lignes avec la même graine.
+    Lancez <code>ProbeSimulator --format all --compression both</code> pour remplir les 6 lignes avec la même graine.</span>
 </p>
 
-<table class="bench">
-    <thead>
-        <tr>
-            <th>Format</th>
-            <th>Compression</th>
-            <th>Paquets</th>
-            <th>Octets réseau</th>
-            <th>Octets payload</th>
-            <th>Taux (réseau / payload)</th>
-            <th>Allocations</th>
-            <th>Pic working set</th>
-            <th>CPU</th>
-            <th>Durée</th>
-            <th>Débit</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var row in _rows)
-        {
+<div class="table-scroll bench">
+    <table>
+        <thead>
             <tr>
-                <td>@row.Format.ToUpperInvariant()</td>
-                <td>@row.Compression</td>
-                @if (row.Last is { Measurements: { } m } last)
-                {
-                    <td>@last.Packets.ToString("N0")</td>
-                    <td>@Megabytes(m.NetworkBytes)</td>
-                    <td>@Megabytes(m.PayloadBytes)</td>
-                    <td>@m.CompressionRatio.ToString("P1")</td>
-                    <td>@Megabytes(m.AllocatedBytes)</td>
-                    <td>@Megabytes(m.PeakWorkingSet)</td>
-                    <td>@m.CpuTime.TotalSeconds.ToString("N2") s</td>
-                    <td>@last.Duration.TotalSeconds.ToString("N2") s</td>
-                    <td>@last.PacketsPerSecond.ToString("N0") paquets/s</td>
-                }
-                else
-                {
-                    <td colspan="9" class="pending">pas encore mesuré</td>
-                }
+                <th>Format</th>
+                <th>Compression</th>
+                <th>Paquets</th>
+                <th>Octets réseau</th>
+                <th>Octets payload</th>
+                <th>Taux (réseau / payload)</th>
+                <th>Allocations</th>
+                <th>Pic working set</th>
+                <th>CPU</th>
+                <th>Durée</th>
+                <th>Débit</th>
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach (var row in _rows)
+            {
+                <tr>
+                    <td>@row.Format.ToUpperInvariant()</td>
+                    <td>@row.Compression</td>
+                    @if (row.Last is { Measurements: { } m } last)
+                    {
+                        <td>@last.Packets.ToString("N0")</td>
+                        <td>@Megabytes(m.NetworkBytes)</td>
+                        <td>@Megabytes(m.PayloadBytes)</td>
+                        <td>@m.CompressionRatio.ToString("P1")</td>
+                        <td>@Megabytes(m.AllocatedBytes)</td>
+                        <td>@Megabytes(m.PeakWorkingSet)</td>
+                        <td>@m.CpuTime.TotalSeconds.ToString("N2") s</td>
+                        <td>@last.Duration.TotalSeconds.ToString("N2") s</td>
+                        <td>@last.PacketsPerSecond.ToString("N0") paquets/s</td>
+                    }
+                    else
+                    {
+                        <td colspan="9" class="pending">pas encore mesuré</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
 
 @code {
     private IReadOnlyList<TestBenchRow> _rows = [];
