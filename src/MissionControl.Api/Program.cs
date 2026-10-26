@@ -14,6 +14,9 @@ builder.Services.AddProbes();
 builder.Services.AddCommands();
 builder.Services.AddTelemetry();
 
+// 🆕 ASP.NET Core 11 : le middleware de décompression gère zstd nativement (zstd, br, deflate, gzip).
+builder.Services.AddRequestDecompression();
+
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
 {
     document.Info.Title = "Mission Control";
@@ -32,6 +35,7 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+app.UseRequestDecompression();
 
 app.MapDefaultEndpoints();
 app.MapOpenApi();
