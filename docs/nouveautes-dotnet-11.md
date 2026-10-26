@@ -108,6 +108,7 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - ℹ️ Les compteurs de paquets (`GET /telemetry`) comptent toujours tout ce qui est reçu, retransmissions comprises : seule la mémoire bornée de l'enregistrement est dédupliquée
 - 🆕 C# 15 : `break` / `continue` labellisés (tag `07-labeled-break`) — la station sol propose la prochaine fenêtre de lancement libre quand celle demandée est prise (`GroundStation.FindNextFreeWindow`) : la fenêtre revient chaque jour à la même heure, `nextDay: for (...)` sur les jours, `foreach` sur la flotte, `continue nextDay;` dès qu'une sonde occupe le créneau, sans drapeau booléen ni `goto`
   - Visible dans le message de validation de `POST /probes` et du formulaire : « … Prochaine fenêtre libre : 2030-01-09 01:00 → 2030-01-09 07:00. »
-- 🆕 `Process` : helpers run-and-capture
+- 🆕 `Process` : helpers run-and-capture (tag `09-process`) — `GET /mission/diagnostic` renvoie le runtime de l'API et le SDK installé sur la station sol : `await Process.RunAndCaptureTextAsync("dotnet", ["--version"], ct)` lance le processus, attend sa fin et rend `StandardOutput`, `StandardError` et `ExitStatus.ExitCode` en un appel, sans `ProcessStartInfo`, ni `RedirectStandardOutput`, ni `WaitForExitAsync`
+  - ℹ️ Existent aussi : `Process.RunAndCaptureText` (synchrone, avec timeout), `Process.Run` / `RunAsync` (code de sortie seul, `silent: true` pour ne rien afficher), et sur une instance `ReadAllLinesAsync` (lignes stdout/stderr entrelacées) et `WaitForExitStatusAsync`
 - 🆕 File-based apps : `#:include`, `dotnet run -e`
 - 🆕 Templates de tests en xUnit v3 sur Microsoft.Testing.Platform, affichage live de `dotnet test`

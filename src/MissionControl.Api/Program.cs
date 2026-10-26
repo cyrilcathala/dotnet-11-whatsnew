@@ -1,6 +1,7 @@
 using MissionControl.Api;
 using MissionControl.Api.Commands;
 using MissionControl.Api.Components;
+using MissionControl.Api.Diagnostics;
 using MissionControl.Api.Logbook;
 using MissionControl.Api.Probes;
 using MissionControl.Api.Report;
@@ -49,6 +50,7 @@ app.MapCommands();
 app.MapTelemetry();
 app.MapMissionReport();
 app.MapLogbook();
+app.MapMissionDiagnostic();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
