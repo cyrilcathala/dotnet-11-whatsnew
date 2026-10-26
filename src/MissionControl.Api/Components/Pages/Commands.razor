@@ -8,50 +8,65 @@
 
 <PageTitle>Commandes — Mission Control</PageTitle>
 
-<h1>Commandes</h1>
+<header class="page-head">
+    <div>
+        <h1>Commandes</h1>
+        <p>Chaque commande part vers la sonde ciblée ; son résultat revient sous forme d'union fermée.</p>
+    </div>
+    @if (Registry.Fleet is not [])
+    {
+        <div class="field target">
+            <label for="probe">Sonde ciblée</label>
+            <select id="probe" @bind="_probeName">
+                @foreach (var probe in Registry.Fleet)
+                {
+                    <option value="@probe.Name">@probe.Name</option>
+                }
+            </select>
+        </div>
+    }
+</header>
 
 @if (Registry.Fleet is [])
 {
-    <p>Aucune sonde dans la flotte : <a href="sondes">enregistrez-en une</a> avant d'envoyer des commandes.</p>
+    <p class="empty">Aucune sonde dans la flotte : <a href="sondes">enregistrez-en une</a> avant d'envoyer des commandes.</p>
 }
 else
 {
-    <div class="field">
-        <label for="probe">Sonde</label>
-        <select id="probe" @bind="_probeName">
-            @foreach (var probe in Registry.Fleet)
-            {
-                <option value="@probe.Name">@probe.Name</option>
-            }
-        </select>
-    </div>
-
     <section class="commands">
-        <form @onsubmit="() => Send(new Thrust(Guid.Empty, _probeName, _deltaV))">
+        <form class="panel" @onsubmit="() => Send(new Thrust(Guid.Empty, _probeName, _deltaV))">
             <h2>Poussée</h2>
-            <label for="delta-v">Delta-V (m/s)</label>
-            <input id="delta-v" type="number" step="any" @bind="_deltaV" />
+            <div class="field">
+                <label for="delta-v">Delta-V (m/s)</label>
+                <input id="delta-v" type="number" step="any" @bind="_deltaV" />
+            </div>
             <button type="submit" class="btn">Envoyer</button>
         </form>
 
-        <form @onsubmit="() => Send(new Rotate(Guid.Empty, _probeName, _attitude))">
+        <form class="panel" @onsubmit="() => Send(new Rotate(Guid.Empty, _probeName, _attitude))">
             <h2>Rotation</h2>
-            <label for="attitude">Attitude cible (°)</label>
-            <input id="attitude" type="number" step="any" @bind="_attitude" />
+            <div class="field">
+                <label for="attitude">Attitude cible (°)</label>
+                <input id="attitude" type="number" step="any" @bind="_attitude" />
+            </div>
             <button type="submit" class="btn">Envoyer</button>
         </form>
 
-        <form @onsubmit="() => Send(new CapturePhoto(Guid.Empty, _probeName, _target))">
+        <form class="panel" @onsubmit="() => Send(new CapturePhoto(Guid.Empty, _probeName, _target))">
             <h2>Capture photo</h2>
-            <label for="target">Cible</label>
-            <input id="target" @bind="_target" />
+            <div class="field">
+                <label for="target">Cible</label>
+                <input id="target" @bind="_target" />
+            </div>
             <button type="submit" class="btn">Envoyer</button>
         </form>
 
-        <form @onsubmit="() => Send(new SelfDestruct(Guid.Empty, _probeName, _confirmationCode))">
+        <form class="panel abort" @onsubmit="() => Send(new SelfDestruct(Guid.Empty, _probeName, _confirmationCode))">
             <h2>Autodestruction</h2>
-            <label for="confirmation">Code de confirmation (nom de la sonde)</label>
-            <input id="confirmation" autocomplete="off" @bind="_confirmationCode" />
+            <div class="field">
+                <label for="confirmation">Code de confirmation (nom de la sonde)</label>
+                <input id="confirmation" autocomplete="off" @bind="_confirmationCode" />
+            </div>
             <button type="submit" class="btn danger">Envoyer</button>
         </form>
     </section>
@@ -59,34 +74,36 @@ else
 
 @if (_last is { } last)
 {
-    var (css, title, detail) = Describe(last.Result);
-    <p class="result @css" role="status"><strong>@title</strong> — @Describe(last.Command) : @detail</p>
+    var (tone, title, detail) = Describe(last.Result);
+    <p class="banner result @tone" role="status"><strong>@title</strong> <span>@Describe(last.Command) : @detail</span></p>
 }
 
 <section class="history">
-    <h2>Historique</h2>
+    <h2 class="section-title">Historique</h2>
     @if (History.Entries is [])
     {
-        <p>Aucune commande envoyée.</p>
+        <p class="empty">Aucune commande envoyée.</p>
     }
     else
     {
-        <table>
-            <thead>
-                <tr><th>Sonde</th><th>Commande</th><th>Résultat</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var entry in History.Entries.Reverse())
-                {
-                    var (css, title, detail) = Describe(entry.Result);
-                    <tr>
-                        <td>@entry.Command.ProbeName</td>
-                        <td>@Describe(entry.Command)</td>
-                        <td class="@css" title="@detail">@title</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th>Sonde</th><th>Commande</th><th>Résultat</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in History.Entries.Reverse())
+                    {
+                        var (tone, title, detail) = Describe(entry.Result);
+                        <tr>
+                            <td>@entry.Command.ProbeName</td>
+                            <td>@Describe(entry.Command)</td>
+                            <td><span class="status @tone" title="@detail">@title</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 </section>
 
@@ -118,11 +135,11 @@ else
     };
 
     // Union : un cas par résultat. Ajouter un cas à CommandResult fait échouer ce switch à la compilation.
-    private static (string Css, string Title, string Detail) Describe(CommandResult result) => result switch
+    private static (string Tone, string Title, string Detail) Describe(CommandResult result) => result switch
     {
-        Acknowledged a => ("acknowledged", "Exécutée", $"accusé de réception à {a.ProbeTime.ToLocalTime():T}"),
-        Rejected r => ("rejected", "Rejetée", r.Reason),
-        TimedOut t => ("timed-out", "Expirée", $"pas de réponse après {t.After.TotalSeconds} s"),
-        ProbeLost l => ("lost", "Sonde perdue", $"dernier contact à {l.LastContact.ToLocalTime():T}"),
+        Acknowledged a => ("tone-nominal", "Exécutée", $"accusé de réception à {a.ProbeTime.ToLocalTime():T}"),
+        Rejected r => ("tone-abort", "Rejetée", r.Reason),
+        TimedOut t => ("tone-caution", "Expirée", $"pas de réponse après {t.After.TotalSeconds} s"),
+        ProbeLost l => ("tone-muted lost", "Sonde perdue", $"dernier contact à {l.LastContact.ToLocalTime():T}"),
     };
 }

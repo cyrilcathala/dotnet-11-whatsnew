@@ -1,63 +1,43 @@
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    max-width: 24rem;
-    margin-bottom: 1rem;
+.target {
+    width: min(100%, 18rem);
 }
 
 .commands {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
     gap: 1rem;
 }
 
 .commands form {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    padding: 0.75rem 1rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
+    gap: 1rem;
 }
 
 .commands h2 {
-    margin: 0 0 0.25rem;
-    font-size: 1.1rem;
+    margin: 0;
+    color: var(--ink);
 }
 
-.danger {
-    background: #b3261e;
-    color: white;
+.commands .btn {
+    align-self: start;
+    margin-block-start: auto;
+}
+
+/* L'autodestruction se distingue : bordure d'abandon, jamais l'orange d'allumage. */
+.commands .abort {
+    border-color: color-mix(in oklch, var(--abort) 55%, transparent);
+    background: color-mix(in oklch, var(--abort) 6%, var(--hull));
+}
+
+.commands .abort h2 {
+    color: var(--abort);
 }
 
 .result {
-    padding: 0.5rem 0.75rem;
-    border-left: 4px solid currentColor;
-}
-
-.acknowledged {
-    color: #1d7f3c;
-}
-
-.rejected {
-    color: #b3261e;
-}
-
-.timed-out {
-    color: #8a6d00;
+    margin-block-start: 1.5rem;
 }
 
 .lost {
-    color: #555;
     text-decoration: line-through;
-}
-
-table {
-    border-collapse: collapse;
-}
-
-th, td {
-    padding: 0.25rem 1rem 0.25rem 0;
-    text-align: left;
 }
