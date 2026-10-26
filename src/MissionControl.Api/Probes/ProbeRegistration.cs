@@ -34,7 +34,12 @@ public sealed class ProbeRegistration : IAsyncValidatableObject
         var station = validationContext.GetRequiredService<GroundStation>();
         if (!await station.IsWindowAvailableAsync(LaunchWindowOpensAt, LaunchWindowClosesAt, cancellationToken))
         {
-            yield return new ValidationResult(messages["LaunchWindowUnavailable"], [nameof(LaunchWindowOpensAt)]);
+            var message = messages["LaunchWindowUnavailable"].Value;
+            if (station.FindNextFreeWindow(LaunchWindowOpensAt, LaunchWindowClosesAt) is (var opensAt, var closesAt))
+            {
+                message += " " + messages["LaunchWindowNextFree", opensAt, closesAt];
+            }
+            yield return new ValidationResult(message, [nameof(LaunchWindowOpensAt)]);
         }
     }
 

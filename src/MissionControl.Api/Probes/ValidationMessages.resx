@@ -24,4 +24,7 @@
   <data name="LaunchWindowUnavailable" xml:space="preserve">
     <value>La station sol n'est pas disponible sur cette fenêtre de lancement.</value>
   </data>
+  <data name="LaunchWindowNextFree" xml:space="preserve">
+    <value>Prochaine fenêtre libre : {0:yyyy-MM-dd HH:mm} → {1:yyyy-MM-dd HH:mm}.</value>
+  </data>
 </root>
