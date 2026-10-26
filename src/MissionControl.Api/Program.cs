@@ -2,6 +2,7 @@ using MissionControl.Api;
 using MissionControl.Api.Commands;
 using MissionControl.Api.Components;
 using MissionControl.Api.Probes;
+using MissionControl.Api.Report;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,7 @@ builder.AddServiceDefaults();
 builder.Services.AddSingleton<MissionStore>();
 builder.Services.AddProbes();
 builder.Services.AddCommands();
+builder.Services.AddMissionReport();
 
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
 {
@@ -34,6 +36,7 @@ app.MapDefaultEndpoints();
 app.MapOpenApi();
 app.MapProbes();
 app.MapCommands();
+app.MapMissionReport();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
