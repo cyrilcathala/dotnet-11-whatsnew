@@ -14,4 +14,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/MissionControl.Tests/MissionControl.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/ProbeSimulator/ProbeSimulator.csproj" />
+  </Folder>
 </Solution>
