@@ -67,7 +67,23 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - ⚠️ HTTP/2 n'est négocié qu'en HTTPS : avec le profil `http` (certificat de dev non approuvé), le simulateur retombe en HTTP/1.1. En HTTPS, `UseHttpsRedirection` doit être évité côté simulateur (un 307 sur un body en flux coupe la connexion), d'où l'utilisation directe de l'URL HTTPS fournie par Aspire.
 - 🔁 C# 15 en rappel du chapitre 03 : tampon de lot `List<TelemetryPacket> batch = [with(capacity: BatchSize)]` dans l'ingestion, extension indexer `packets[from, to]` pour « les 5 premières minutes de vol » (tableau de bord et `GET /telemetry/probes/{probe}/launch`)
 - ℹ️ Aspire : le simulateur est une ressource `WithExplicitStart()`, lancée depuis le dashboard
-- Banc d'essai : octets réseau, octets du payload, allocations, CPU, débit par format × compression (métriques OTel dans Aspire)
+- Banc d'essai : octets réseau, octets du payload, allocations, pic de working set, CPU, durée et débit par format × compression
+  - Décorateur `InstrumentedTelemetryImporter` autour d'`ITelemetryImporter` ; mesures renvoyées dans la réponse de `POST /telemetry/import` (`measurements`), page « Banc d'essai » (`/banc-d-essai`) et `GET /telemetry/bench`
+  - Octets réseau : middleware `UseImportTraffic()` placé **avant** `UseRequestDecompression()`, qui enveloppe le body compressé d'un flux compteur et note le `Content-Encoding` (retiré ensuite par le middleware natif). Octets payload : `PipeReader` compteur passé au lecteur de format, après décompression. Un body non compressé n'est pas enveloppé (le `PipeReader` natif de Kestrel est conservé) : octets réseau = octets payload
+  - Métriques `System.Diagnostics.Metrics` (meter `MissionControl.Telemetry`, histogrammes `mission_control.import.*` tagués `format` et `compression`), exportées vers le dashboard Aspire par `AddMeter("MissionControl.*")`
+  - Simulateur `--format all --compression both` : les 6 combinaisons en séquence, même graine (ressource Aspire `bench`)
+  - Mesuré à la main (Release, HTTP/1.1, 1 million de paquets, graine 42) :
+
+    | Format | Compression | Réseau | Payload | Taux | Allocations | Pic WS | CPU | Durée | Débit (paquets/s) |
+    |---|---|---|---|---|---|---|---|---|---|
+    | json | none | 100,7 Mo | 100,7 Mo | 100 % | 347,1 Mo | 372,6 Mo | 3,55 s | 2,47 s | 404 342 |
+    | json | zstd | 9,9 Mo | 100,7 Mo | 10 % | 346,3 Mo | 506,4 Mo | 1,84 s | 1,08 s | 927 887 |
+    | jsonl | none | 100,7 Mo | 100,7 Mo | 100 % | 329,8 Mo | 517,2 Mo | 1,69 s | 0,97 s | 1 029 870 |
+    | jsonl | zstd | 9,9 Mo | 100,7 Mo | 10 % | 329,6 Mo | 492,7 Mo | 1,12 s | 0,94 s | 1 058 627 |
+    | cbor | none | 79,4 Mo | 79,4 Mo | 100 % | 403,3 Mo | 490,2 Mo | 1,78 s | 1,53 s | 655 302 |
+    | cbor | zstd | 10,4 Mo | 79,4 Mo | 13 % | 401,1 Mo | 438,2 Mo | 1,52 s | 1,32 s | 759 759 |
+
+  - ⚠️ Mesures sur tout le processus : le pic de working set d'un import hérite du tas laissé par le précédent (le GC ne rend pas la mémoire tout de suite), seul le premier import part d'un processus « froid ». Le premier import (json) paie aussi le JIT
 
 ## 05 — Rapport de mission
 - 🆕 LINQ `FullJoin` (`Enumerable` / `AsyncEnumerable`)

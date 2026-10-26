@@ -13,7 +13,14 @@ public static class TelemetryEndpoints
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<TelemetryStore>();
         services.AddSingleton<AsteroidCatalogStore>();
-        services.AddSingleton<ITelemetryImporter, TelemetryImporter>();
+        services.AddSingleton<TestBench>();
+        services.AddHttpContextAccessor();
+        services.AddSingleton<TelemetryImporter>();
+        // Banc d'essai : l'instrumentation enveloppe l'import (décorateur).
+        services.AddSingleton<ITelemetryImporter>(sp => new InstrumentedTelemetryImporter(
+            sp.GetRequiredService<TelemetryImporter>(),
+            sp.GetRequiredService<IHttpContextAccessor>(),
+            sp.GetRequiredService<TestBench>()));
         return services;
     }
 
@@ -28,6 +35,7 @@ public static class TelemetryEndpoints
         telemetry.MapGet("/", (TelemetryStore store) => store.GetStatus());
         telemetry.MapGet("/probes/{probe}/launch", GetLaunchWindow);
         telemetry.MapGet("/catalog", GetCatalog);
+        telemetry.MapGet("/bench", (TestBench bench) => bench.GetRows());
 
         return app;
     }

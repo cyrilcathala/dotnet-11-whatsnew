@@ -3,7 +3,9 @@ using MissionControl.Telemetry;
 
 namespace ProbeSimulator;
 
-internal sealed record SimulatorOptions(ITelemetryFormat Format, string Compression, int Count, int Seed, Uri ApiUrl)
+/// <summary>Plusieurs formats ou compressions = plusieurs imports, toujours lancés en séquence.</summary>
+internal sealed record SimulatorOptions(
+    IReadOnlyList<ITelemetryFormat> Formats, IReadOnlyList<string> Compressions, int Count, int Seed, Uri ApiUrl)
 {
     private const int DefaultCount = 1_000_000;
     private const int DefaultSeed = 42;
@@ -22,17 +24,33 @@ internal sealed record SimulatorOptions(ITelemetryFormat Format, string Compress
             values[args[i][2..]] = args[i + 1];
         }
 
-        var formatName = values.GetValueOrDefault("format", "jsonl");
-        if (TelemetryFormats.FindByName(formatName) is not { } format)
+        var formatName = values.GetValueOrDefault("format", "jsonl").ToLowerInvariant();
+        IReadOnlyList<ITelemetryFormat> formats;
+        if (formatName == "all")
         {
-            error = $"Format non disponible : {formatName} (disponibles : {string.Join(", ", TelemetryFormats.All.Select(f => f.Name))}).";
+            // Même ordre que la page « Banc d'essai » : du document unique au flux binaire.
+            formats = [TelemetryFormats.Json, TelemetryFormats.JsonLines, TelemetryFormats.Cbor];
+        }
+        else if (TelemetryFormats.FindByName(formatName) is { } format)
+        {
+            formats = [format];
+        }
+        else
+        {
+            error = $"Format non disponible : {formatName} (disponibles : {string.Join(", ", TelemetryFormats.All.Select(f => f.Name))}, all).";
             return false;
         }
 
         var compression = values.GetValueOrDefault("compression", "none").ToLowerInvariant();
-        if (compression is not ("none" or "zstd"))
+        IReadOnlyList<string> compressions = compression switch
         {
-            error = $"Compression non disponible : {compression} (disponibles : none, zstd).";
+            "none" or "zstd" => [compression],
+            "both" => ["none", "zstd"],
+            _ => [],
+        };
+        if (compressions.Count == 0)
+        {
+            error = $"Compression non disponible : {compression} (disponibles : none, zstd, both).";
             return false;
         }
 
@@ -59,7 +77,7 @@ internal sealed record SimulatorOptions(ITelemetryFormat Format, string Compress
             return false;
         }
 
-        options = new SimulatorOptions(format, compression, count, seed, apiUrl);
+        options = new SimulatorOptions(formats, compressions, count, seed, apiUrl);
         error = null;
         return true;
     }

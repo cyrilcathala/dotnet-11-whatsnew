@@ -34,6 +34,8 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+// Banc d'essai : les octets réseau se comptent avant que le body ne soit décompressé.
+app.UseImportTraffic();
 app.UseRequestDecompression();
 
 app.MapDefaultEndpoints();
