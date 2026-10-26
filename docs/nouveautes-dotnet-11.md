@@ -87,7 +87,10 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - ⚠️ Mesures sur tout le processus : le pic de working set d'un import hérite du tas laissé par le précédent (le GC ne rend pas la mémoire tout de suite), seul le premier import part d'un processus « froid ». Le premier import (json) paie aussi le JIT
 
 ## 05 — Rapport de mission
-- 🆕 LINQ `FullJoin` (`Enumerable` / `AsyncEnumerable`)
+- 🆕 LINQ `FullJoin` (`Enumerable`) : `GET /mission/report` et la page « Rapport » rapprochent les commandes envoyées des accusés de réception (`MissionReport`)
+  - Côté non apparié = `default` : des records des deux côtés pour que `null` signifie « absent » ; ordre de sortie = commandes dans l'ordre, puis accusés orphelins à la fin
+  - 🆕 C# 15 : classement par un `switch` exhaustif sur le tuple `(commande, accusé)` (`(null, null)` → `UnreachableException`) ; ce qui vaut accusé (`Acknowledged`, `Rejected`) se décide par un switch exhaustif sur l'union `CommandResult`
+  - Scénario de démo : une photo (appariée), une rotation de 170° (expirée → commande sans accusé), et au premier contact chaque sonde envoie un accusé spontané (orphelin) ; une commande à une sonde autodétruite reste aussi sans accusé
 - 🆕 `JsonSerializer.SerializeAsyncEnumerable` vers un `PipeWriter`, sortie JSON Lines (`topLevelValues: true`)
 
 ## 06 — « Houston, on a un problème »
