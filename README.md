@@ -47,6 +47,8 @@ Le simulateur se lance aussi à la main :
 dotnet run --project tools/ProbeSimulator -- --format jsonl --compression none --count 1000000 --seed 42 --url http://localhost:5011
 ```
 
+Avec `--compression zstd`, le body est compressé au fil de l'envoi (`Content-Encoding: zstd`) et l'API le décompresse avant de le lire, quel que soit le format.
+
 ### Lancer les tests
 
 ```bash
