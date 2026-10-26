@@ -2,6 +2,7 @@ using MissionControl.Api;
 using MissionControl.Api.Commands;
 using MissionControl.Api.Components;
 using MissionControl.Api.Probes;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,7 @@ app.UseHttpsRedirection();
 
 app.MapDefaultEndpoints();
 app.MapOpenApi();
+app.MapScalarApiReference();
 app.MapProbes();
 app.MapCommands();
 
