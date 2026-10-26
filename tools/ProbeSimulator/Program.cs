@@ -1,11 +1,12 @@
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Net;
 using MissionControl.Telemetry;
 using ProbeSimulator;
 
 // Simulateur de sondes : génère la télémétrie et l'envoie à l'API en HTTP/2, au fil de l'eau.
 //   --format jsonl          format du body (jsonl ; cbor et json arrivent ensuite)
-//   --compression none      compression du body (none ; zstd arrive ensuite)
+//   --compression none      compression du body (none | zstd)
 //   --count 1000000         nombre de paquets
 //   --seed 42               graine du générateur
 //   --url https://...       adresse de l'API (par défaut : celle fournie par Aspire)
@@ -13,7 +14,7 @@ using ProbeSimulator;
 if (!SimulatorOptions.TryParse(args, out var options, out var error))
 {
     Console.Error.WriteLine(error);
-    Console.Error.WriteLine("Usage : ProbeSimulator [--format jsonl] [--compression none] [--count 1000000] [--seed 42] [--url https://localhost:7269]");
+    Console.Error.WriteLine("Usage : ProbeSimulator [--format jsonl] [--compression none|zstd] [--count 1000000] [--seed 42] [--url https://localhost:7269]");
     return 2;
 }
 
@@ -29,7 +30,14 @@ Console.WriteLine($"🛰️  {options.Count:N0} paquets en {options.Format.Name}
 
 var stopwatch = Stopwatch.StartNew();
 var packets = Progress(ProbeFleet.GenerateAsync(options.Count, options.Seed), options.Count);
-using var response = await http.PostAsync("/telemetry/import", new TelemetryContent(options.Format, packets));
+HttpContent content = new TelemetryContent(options.Format, packets);
+if (options.Compression == "zstd")
+{
+    // 🆕 .NET 11 : compresse au fil de l'envoi et pose Content-Encoding: zstd (le Content-Type est conservé).
+    content = new ZstandardCompressedContent(content, CompressionLevel.Fastest);
+}
+
+using var response = await http.PostAsync("/telemetry/import", content);
 var body = await response.Content.ReadAsStringAsync();
 
 if (!response.IsSuccessStatusCode)

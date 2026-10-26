@@ -50,6 +50,8 @@ dotnet run --project tools/ProbeSimulator -- --format cbor --url http://localhos
 
 `--format json` envoie à la place le catalogue d'astéroïdes, un seul document JSON qui embarque les mêmes relevés ; le catalogue importé se consulte via `GET /telemetry/catalog`.
 
+Avec `--compression zstd`, le body est compressé au fil de l'envoi (`Content-Encoding: zstd`) et l'API le décompresse avant de le lire, quel que soit le format.
+
 ### Lancer les tests
 
 ```bash

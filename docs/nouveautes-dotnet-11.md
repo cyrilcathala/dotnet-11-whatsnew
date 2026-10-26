@@ -37,9 +37,11 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - ℹ️ Pas de conflit avec l'indexeur `this[int]` de `IReadOnlyList<T>` : le type du paramètre (`Guid`) diffère
 
 ## 04 — Pluie de télémétrie (import JSON / JSONL / CBOR)
-- 🆕 `ZstandardCompressedContent` (compression du body de requête côté `HttpClient`)
-- 🆕 `ZstandardStream` dans `System.IO.Compression`
-- ❓ Décompression zstd côté ASP.NET Core (natif ou `IDecompressionProvider` maison)
+- 🆕 `ZstandardCompressedContent` (compression du body de requête côté `HttpClient`) : simulateur `--compression zstd`, compresse au fil de l'envoi, pose `Content-Encoding: zstd` et conserve le `Content-Type` du contenu enveloppé
+- 🆕 `ZstandardStream` dans `System.IO.Compression` (aperçu d'un body zstd non déclaré, compression dans les tests)
+- 🆕 Décompression zstd native côté ASP.NET Core : `AddRequestDecompression()` enregistre `zstd`, `br`, `deflate` et `gzip` (vérifié sur la RC3), aucun `IDecompressionProvider` maison n'est nécessaire. Le middleware retire l'en-tête `Content-Encoding` une fois le body décompressé
+  - ⚠️ Un `Content-Encoding` inconnu (ou plusieurs encodages enchaînés) n'est pas rejeté par le middleware, qui laisse passer le body tel quel. L'endpoint repère l'en-tête restant et répond 415. Un body zstd corrompu lève `InvalidDataException` pendant la lecture : on répond 400.
+  - ⚠️ La limite de taille du body (30 Mo) s'applique au body **décompressé**, et le middleware la lit avant l'endpoint : elle est levée par métadonnée (`DisableRequestSizeLimitAttribute`) sur `POST /telemetry/import`. Vérifié à la main : 1 million de paquets JSONL en zstd (≈ 100 Mo décompressés) importés en 2,7 s (Release, HTTP/1.1)
 - 🆕 `CborReader` incrémental (`isFinalBlock: false` + `SlideData`)
   - `CborTelemetryFormat` : `CborReader` en `Lax` (obligatoire avec `isFinalBlock: false`), `AllowMultipleRootLevelValues`, une map par paquet. Seuls les paquets complets sont décodés (`TrySkipValue` renvoie `false` sans bouger sur un paquet coupé, état `NeedsMoreData`) ; on rend au `PipeReader` ce qui est consommé, puis `SlideData` sur le tampon suivant, qui commence par les octets non lus. Dernier bloc : `isFinalBlock: true`
   - Chaque paquet complet est relu par un second `CborReader` réutilisé via `Reset(slice, isFinalBlock: true)`
@@ -51,6 +53,9 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - ⚠️ Écart : avec les options JSON « web » (Minimal APIs, `NumberHandling = AllowReadingFromString`), `"ok"` est ambigu entre `double` et `string`. `[JsonNumberHandling(JsonNumberHandling.Strict)]` posé sur l'union suffit (vérifié via `POST /telemetry/packets`), pas besoin de toucher aux options globales
   - Une union peut redéfinir `ToString()` dans son corps (affichage du tableau de bord)
 - 🆕 Stream adapters sans copie : `ReadOnlySequenceStream`, `ReadOnlyMemoryStream`, `WritableMemoryStream`, `StringStream`
+  - `ReadOnlySequenceStream` sur le chemin d'import (`UndeclaredZstd`) : un body zstd envoyé sans `Content-Encoding` est repéré à son numéro magique ; le tampon du `PipeReader` (jusqu'à 160 Kio, éventuellement en plusieurs segments) est passé sans copie à `ZstandardStream`, qui attend un `Stream`, pour citer le début du contenu dans le 415
+  - `StringStream` (body JSONL texte encodé à la volée) et `ReadOnlyMemoryStream` (octets à compresser) dans les tests zstd
+  - ℹ️ `WritableMemoryStream` n'est pas utilisé : aucun endroit naturel dans l'application
 - 🆕 `System.IO.Pipelines` : moins de contention lecteur/écrivain (interne)
 - 🔁 `JsonSerializer.DeserializeAsync(PipeReader)` / `Request.BodyReader`
   - JSONL : `JsonSerializer.DeserializeAsyncEnumerable(Request.BodyReader, typeInfo, topLevelValues: true)` lit un paquet par ligne, sans buffer le payload (rappel .NET 10, `JsonLinesTelemetryFormat`)
