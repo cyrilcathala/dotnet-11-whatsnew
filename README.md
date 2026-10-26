@@ -64,6 +64,17 @@ Une ligne par paquet reçu par import, dans l'ordre de réception et quel que so
 
 Pendant chaque import, l'API ajoute les paquets lot par lot à un fichier JSONL sur disque ; l'export relit ce fichier en flux, sans jamais charger le journal en mémoire. Le fichier vit dans un sous-dossier propre à l'instance, sous le dossier temporaire du système (autre racine : `Logbook__Directory=D:\journaux`), et disparaît à l'arrêt de l'API (celui d'une API tuée est supprimé au démarrage suivant). Un export lancé pendant un import contient les lots déjà écrits à son début.
 
+### Diagnostic de mission (file-based app)
+
+🆕 .NET 11 : un script C# sans `.csproj`, en deux fichiers (`#:include`), qui interroge l'API et résume la station sol, la flotte, la télémétrie et le rapport de mission :
+
+```bash
+dotnet run tools/diagnostic/mission-diagnostic.cs
+dotnet run tools/diagnostic/mission-diagnostic.cs -e MISSION_API_URL=https://localhost:7269
+```
+
+`-e` passe une variable d'environnement au script (par défaut : `http://localhost:5011`, le profil HTTP de l'API).
+
 ### Lancer les tests
 
 ```bash
@@ -82,6 +93,7 @@ MissionControl.slnx
 ├─ src/MissionControl.Telemetry        formats de télémétrie partagés (paquet, lecteurs et écrivains)
 ├─ tools/ProbeSimulator                console : génère et envoie la télémétrie des sondes
 ├─ tools/Houston                       console net10.0;net11.0 : Runtime Async, stack traces et benchmark (voir son README)
+├─ tools/diagnostic                    file-based app (hors solution) : diagnostic de mission
 └─ tests/MissionControl.Tests          xUnit v3 (Microsoft.Testing.Platform)
 ```
 
