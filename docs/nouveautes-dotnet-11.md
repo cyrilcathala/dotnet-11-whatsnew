@@ -103,7 +103,9 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - ℹ️ BenchmarkDotNet 0.15.8 ne connaît pas .NET 11 : `0.16.0-preview.2` (`RuntimeMoniker.Net11_0`)
 
 ## Bonus en rafale
-- 🆕 `EqualityComparer<T>.Create` (comparateur depuis un sélecteur de clé)
+- 🆕 `EqualityComparer<T>.Create(keySelector)` (tag `08-equality-comparer`) — un paquet retransmis (même séquence, même capteur) n'est inscrit qu'une fois dans l'enregistrement du début de vol : `HashSet<TelemetryPacket>` construit avec `EqualityComparer<TelemetryPacket>.Create(p => (p!.Sequence, p.Sensor))`, au lieu d'une classe `IEqualityComparer<T>` écrite à la main. Réimporter le journal de bord dans la même station ne le duplique plus
+  - ⚠️ Le paramètre du sélecteur est annoté nullable : `p => p.Sequence` donne CS8602 (erreur avec `TreatWarningsAsErrors`), d'où `p!`
+  - ℹ️ Les compteurs de paquets (`GET /telemetry`) comptent toujours tout ce qui est reçu, retransmissions comprises : seule la mémoire bornée de l'enregistrement est dédupliquée
 - 🆕 C# 15 : `break` / `continue` labellisés (tag `07-labeled-break`) — la station sol propose la prochaine fenêtre de lancement libre quand celle demandée est prise (`GroundStation.FindNextFreeWindow`) : la fenêtre revient chaque jour à la même heure, `nextDay: for (...)` sur les jours, `foreach` sur la flotte, `continue nextDay;` dès qu'une sonde occupe le créneau, sans drapeau booléen ni `goto`
   - Visible dans le message de validation de `POST /probes` et du formulaire : « … Prochaine fenêtre libre : 2030-01-09 01:00 → 2030-01-09 07:00. »
 - 🆕 `Process` : helpers run-and-capture
