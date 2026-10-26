@@ -26,7 +26,9 @@ public static class TelemetryFormats
 {
     public static ITelemetryFormat JsonLines { get; } = new JsonLinesTelemetryFormat();
 
-    public static IReadOnlyList<ITelemetryFormat> All { get; } = [JsonLines];
+    public static AsteroidCatalogJsonFormat Json { get; } = new();
+
+    public static IReadOnlyList<ITelemetryFormat> All { get; } = [JsonLines, Json];
 
     public static ITelemetryFormat? FindByName(string name)
         => All.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
