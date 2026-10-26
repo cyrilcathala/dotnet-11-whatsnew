@@ -1,26 +1,67 @@
-.field {
+.deck {
+    display: grid;
+    grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+}
+
+.register ::deep form {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    max-width: 24rem;
-    margin-bottom: 1rem;
+    gap: 1.1rem;
+}
+
+.submit {
+    align-self: start;
+    margin-block-start: 0.4rem;
 }
 
 .pending {
-    margin: 0;
-    color: #8a6d00;
-    font-style: italic;
+    color: var(--caution);
+    font-size: 0.875rem;
 }
 
-.success {
-    color: #1d7f3c;
+.pending::before {
+    content: "";
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-inline-end: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+    animation: blink 900ms ease-in-out infinite alternate;
 }
 
-table {
-    border-collapse: collapse;
+@keyframes blink {
+    to {
+        opacity: 0.2;
+    }
 }
 
-th, td {
-    padding: 0.25rem 1rem 0.25rem 0;
-    text-align: left;
+.register .banner {
+    margin-block-start: 1.25rem;
+}
+
+.fleet h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-block: 0.25rem 1rem;
+}
+
+.count {
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ink-3);
+}
+
+.name {
+    font-weight: 600;
+}
+
+@media (max-width: 56rem) {
+    .deck {
+        grid-template-columns: 1fr;
+    }
 }
