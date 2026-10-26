@@ -50,6 +50,9 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
 ## 05 — Rapport de mission
 - 🆕 LINQ `FullJoin` (`Enumerable` / `AsyncEnumerable`)
 - 🆕 `JsonSerializer.SerializeAsyncEnumerable` vers un `PipeWriter`, sortie JSON Lines (`topLevelValues: true`)
+  - `GET /logbook/export` (`LogbookEndpoints`) : `SerializeAsyncEnumerable(Response.BodyWriter, logbook.ReadAsync(ct), typeInfo, topLevelValues: true, ct)` → `application/jsonl`, un document compact par entrée terminé par LF (y compris la dernière), sans tableau englobant ; vérifié par test
+  - ℹ️ Le journal de bord = les paquets conservés par la station (enregistrement de début de vol de chaque sonde), parcourus sonde par sonde : même contrat JSON que l'import, l'export se réimporte tel quel
+  - ℹ️ La surcharge `PipeWriter` ne complète pas le writer : inutile ici, ASP.NET Core complète `Response.BodyWriter` à la fin de la requête
 
 ## 06 — « Houston, on a un problème »
 - 🆕 Runtime Async : stack traces propres, moins d'allocations (comparaison net10.0 / net11.0 + BenchmarkDotNet)

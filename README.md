@@ -47,6 +47,16 @@ Le simulateur se lance aussi à la main :
 dotnet run --project tools/ProbeSimulator -- --format jsonl --compression none --count 1000000 --seed 42 --url http://localhost:5011
 ```
 
+### Exporter le journal de bord
+
+Le lien **Exporter le journal de bord (JSONL)** de la page Télémétrie télécharge le journal, diffusé en flux par l'API :
+
+```bash
+curl http://localhost:5011/logbook/export -o journal-de-bord.jsonl
+```
+
+Une entrée par ligne (les paquets conservés pour chaque sonde), au même format que l'import : le fichier se réimporte tel quel avec `POST /telemetry/import`.
+
 ### Lancer les tests
 
 ```bash
