@@ -1,0 +1,127 @@
+@page "/commandes"
+@rendermode InteractiveServer
+@using MissionControl.Api.Commands
+@using MissionControl.Api.Probes
+@inject ProbeRegistry Registry
+@inject CommandCenter Center
+@inject CommandHistory History
+
+<PageTitle>Commandes — Mission Control</PageTitle>
+
+<h1>Commandes</h1>
+
+@if (Registry.Fleet is [])
+{
+    <p>Aucune sonde dans la flotte : <a href="sondes">enregistrez-en une</a> avant d'envoyer des commandes.</p>
+}
+else
+{
+    <div class="field">
+        <label for="probe">Sonde</label>
+        <select id="probe" @bind="_probeName">
+            @foreach (var probe in Registry.Fleet)
+            {
+                <option value="@probe.Name">@probe.Name</option>
+            }
+        </select>
+    </div>
+
+    <section class="commands">
+        <form @onsubmit="() => Send(new Thrust(Guid.Empty, _probeName, _deltaV))">
+            <h2>Poussée</h2>
+            <label for="delta-v">Delta-V (m/s)</label>
+            <input id="delta-v" type="number" step="any" @bind="_deltaV" />
+            <button type="submit" class="btn">Envoyer</button>
+        </form>
+
+        <form @onsubmit="() => Send(new Rotate(Guid.Empty, _probeName, _attitude))">
+            <h2>Rotation</h2>
+            <label for="attitude">Attitude cible (°)</label>
+            <input id="attitude" type="number" step="any" @bind="_attitude" />
+            <button type="submit" class="btn">Envoyer</button>
+        </form>
+
+        <form @onsubmit="() => Send(new CapturePhoto(Guid.Empty, _probeName, _target))">
+            <h2>Capture photo</h2>
+            <label for="target">Cible</label>
+            <input id="target" @bind="_target" />
+            <button type="submit" class="btn">Envoyer</button>
+        </form>
+
+        <form @onsubmit="() => Send(new SelfDestruct(Guid.Empty, _probeName, _confirmationCode))">
+            <h2>Autodestruction</h2>
+            <label for="confirmation">Code de confirmation (nom de la sonde)</label>
+            <input id="confirmation" autocomplete="off" @bind="_confirmationCode" />
+            <button type="submit" class="btn danger">Envoyer</button>
+        </form>
+    </section>
+}
+
+@if (_last is { } last)
+{
+    var (css, title, detail) = Describe(last.Result);
+    <p class="result @css" role="status"><strong>@title</strong> — @Describe(last.Command) : @detail</p>
+}
+
+<section class="history">
+    <h2>Historique</h2>
+    @if (History.Entries is [])
+    {
+        <p>Aucune commande envoyée.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th>Sonde</th><th>Commande</th><th>Résultat</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in History.Entries.Reverse())
+                {
+                    var (css, title, detail) = Describe(entry.Result);
+                    <tr>
+                        <td>@entry.Command.ProbeName</td>
+                        <td>@Describe(entry.Command)</td>
+                        <td class="@css" title="@detail">@title</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+@code {
+    private string _probeName = "";
+    private double _deltaV = 10;
+    private double _attitude = 45;
+    private string _target = "Europe";
+    private string _confirmationCode = "";
+    private CommandLogEntry? _last;
+
+    protected override void OnInitialized() => _probeName = Registry.Fleet.FirstOrDefault()?.Name ?? "";
+
+    private void Send(ProbeCommand command)
+    {
+        if (!Center.TrySend(command, out var result)) return;
+
+        _last = new(command, result);
+        _confirmationCode = "";
+    }
+
+    // Hiérarchie fermée : un cas par commande, pas de branche default.
+    private static string Describe(ProbeCommand command) => command switch
+    {
+        Thrust t => $"poussée de {t.DeltaV} m/s",
+        Rotate r => $"rotation vers {r.Attitude}°",
+        CapturePhoto p => $"photo de « {p.Target} »",
+        SelfDestruct => "autodestruction",
+    };
+
+    // Union : un cas par résultat. Ajouter un cas à CommandResult fait échouer ce switch à la compilation.
+    private static (string Css, string Title, string Detail) Describe(CommandResult result) => result switch
+    {
+        Acknowledged a => ("acknowledged", "Exécutée", $"accusé de réception à {a.ProbeTime.ToLocalTime():T}"),
+        Rejected r => ("rejected", "Rejetée", r.Reason),
+        TimedOut t => ("timed-out", "Expirée", $"pas de réponse après {t.After.TotalSeconds} s"),
+    };
+}
