@@ -1,0 +1,116 @@
+@page "/sondes"
+@rendermode InteractiveServer
+@using MissionControl.Api.Probes
+@implements IDisposable
+@inject ProbeRegistry Registry
+
+<PageTitle>Flotte — Mission Control</PageTitle>
+
+<h1>Flotte</h1>
+
+<section class="register">
+    <h2>Enregistrer une sonde</h2>
+
+    @* 🆕 .NET 11 : EditForm attend les validateurs async (attribut et IAsyncValidatableObject) avant OnValidSubmit. *@
+    <EditForm EditContext="_editContext" OnValidSubmit="Register" FormName="register-probe">
+        <DataAnnotationsValidator />
+
+        <div class="field">
+            <label for="probe-name">Nom</label>
+            @* Validation à chaque frappe : chaque saisie remplace (et annule) la vérification précédente. *@
+            <input id="probe-name" class="@_editContext.FieldCssClass(_nameField)" autocomplete="off"
+                   @bind="_registration.Name" @bind:event="oninput" @bind:after="() => _editContext.NotifyFieldChanged(_nameField)" />
+            @if (_editContext.IsValidationPending(_nameField))
+            {
+                <p class="pending" role="status">Vérification auprès du registre…</p>
+            }
+            <ValidationMessage For="() => _registration.Name" />
+        </div>
+
+        <div class="field">
+            <label for="opens-at">Ouverture de la fenêtre de lancement</label>
+            <InputDate id="opens-at" Type="InputDateType.DateTimeLocal" @bind-Value="_registration.LaunchWindowOpensAt" />
+            <ValidationMessage For="() => _registration.LaunchWindowOpensAt" />
+        </div>
+
+        <div class="field">
+            <label for="closes-at">Fermeture de la fenêtre de lancement</label>
+            <InputDate id="closes-at" Type="InputDateType.DateTimeLocal" @bind-Value="_registration.LaunchWindowClosesAt" />
+            <ValidationMessage For="() => _registration.LaunchWindowClosesAt" />
+        </div>
+
+        <button type="submit" class="btn" disabled="@_editContext.IsValidationPending()">
+            @(_editContext.IsValidationPending() ? "Contact avec la station sol…" : "Enregistrer")
+        </button>
+    </EditForm>
+
+    @if (_lastRegistered is not null)
+    {
+        <p class="success" role="status">Sonde « @_lastRegistered » ajoutée à la flotte.</p>
+    }
+</section>
+
+<section class="fleet">
+    <h2>Sondes enregistrées</h2>
+    @if (Registry.Fleet is [])
+    {
+        <p>Aucune sonde pour l'instant.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th>Nom</th><th>Ouverture</th><th>Fermeture</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var probe in Registry.Fleet)
+                {
+                    <tr>
+                        <td>@probe.Name</td>
+                        <td>@probe.LaunchWindowOpensAt.ToString("g")</td>
+                        <td>@probe.LaunchWindowClosesAt.ToString("g")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+@code {
+    private ProbeRegistration _registration = NewRegistration();
+    private EditContext _editContext = null!;
+    private FieldIdentifier _nameField;
+    private string? _lastRegistered;
+
+    protected override void OnInitialized() => ResetForm();
+
+    private void ResetForm()
+    {
+        if (_editContext is not null) _editContext.OnValidationStateChanged -= OnValidationStateChanged;
+
+        _editContext = new EditContext(_registration);
+        _editContext.OnValidationStateChanged += OnValidationStateChanged;
+        _nameField = _editContext.Field(nameof(ProbeRegistration.Name));
+    }
+
+    // Les validations async se terminent hors du cycle de rendu : on rafraîchit l'indicateur « Vérification… ».
+    private void OnValidationStateChanged(object? sender, ValidationStateChangedEventArgs e) =>
+        _ = InvokeAsync(StateHasChanged);
+
+    private void Register()
+    {
+        if (!Registry.TryRegister(_registration.ToProbe())) return;
+
+        _lastRegistered = _registration.Name;
+        _registration = NewRegistration();
+        ResetForm();
+    }
+
+    private static ProbeRegistration NewRegistration()
+    {
+        var opensAt = DateTime.Today.AddDays(1).AddHours(9);
+        return new() { LaunchWindowOpensAt = opensAt, LaunchWindowClosesAt = opensAt.AddHours(4) };
+    }
+
+    public void Dispose() => _editContext.OnValidationStateChanged -= OnValidationStateChanged;
+}
