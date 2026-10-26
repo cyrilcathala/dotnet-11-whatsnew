@@ -91,6 +91,9 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - Classement par un `switch` exhaustif sur le tuple `(commande, accusé)` (`(null, null)` → `UnreachableException`) ; ce qui vaut accusé (`Acknowledged`, `Rejected`) se décide par un switch exhaustif sur l'union `CommandResult` (🆕 C# 15, rappel du chapitre 02)
   - Scénario de démo : une photo (appariée), une rotation de 170° (expirée → commande sans accusé), et au premier contact chaque sonde envoie un accusé spontané (orphelin) ; une commande à une sonde autodétruite reste aussi sans accusé
 - 🆕 `JsonSerializer.SerializeAsyncEnumerable` vers un `PipeWriter`, sortie JSON Lines (`topLevelValues: true`)
+  - `GET /logbook/export` (`LogbookEndpoints`) : `SerializeAsyncEnumerable(Response.BodyWriter, logbook.ReadAsync(ct), typeInfo, topLevelValues: true, ct)` → `application/jsonl`, un document compact par entrée terminé par LF (y compris la dernière), sans tableau englobant ; vérifié par test
+  - ℹ️ Le journal de bord = les paquets conservés par la station (enregistrement de début de vol de chaque sonde), parcourus sonde par sonde : même contrat JSON que l'import, l'export se réimporte tel quel
+  - ℹ️ La surcharge `PipeWriter` ne complète pas le writer : inutile ici, ASP.NET Core complète `Response.BodyWriter` à la fin de la requête
 
 ## 06 — « Houston, on a un problème »
 - 🆕 Runtime Async : stack traces propres, moins d'allocations (comparaison net10.0 / net11.0 + BenchmarkDotNet)

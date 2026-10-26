@@ -1,6 +1,7 @@
 using MissionControl.Api;
 using MissionControl.Api.Commands;
 using MissionControl.Api.Components;
+using MissionControl.Api.Logbook;
 using MissionControl.Api.Probes;
 using MissionControl.Api.Report;
 using MissionControl.Api.Telemetry;
@@ -14,6 +15,7 @@ builder.Services.AddProbes();
 builder.Services.AddCommands();
 builder.Services.AddTelemetry();
 builder.Services.AddMissionReport();
+builder.Services.AddLogbook();
 
 // 🆕 ASP.NET Core 11 : le middleware de décompression gère zstd nativement (zstd, br, deflate, gzip).
 builder.Services.AddRequestDecompression();
@@ -46,6 +48,7 @@ app.MapProbes();
 app.MapCommands();
 app.MapTelemetry();
 app.MapMissionReport();
+app.MapLogbook();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
