@@ -1,0 +1,130 @@
+@page "/telemetrie"
+@rendermode InteractiveServer
+@using MissionControl.Api.Telemetry
+@using MissionControl.Telemetry
+@implements IAsyncDisposable
+@inject TelemetryStore Store
+@inject TimeProvider Clock
+
+<PageTitle>Télémétrie — Mission Control</PageTitle>
+
+<h1>Télémétrie 📡</h1>
+
+<section class="gauges" aria-live="polite">
+    <div class="gauge">
+        <span class="label">Paquets reçus</span>
+        <span class="value">@_status.Packets.ToString("N0")</span>
+    </div>
+    <div class="gauge">
+        <span class="label">Débit</span>
+        <span class="value">@_packetsPerSecond.ToString("N0") <small>paquets/s</small></span>
+    </div>
+    <div class="gauge">
+        <span class="label">Sondes actives</span>
+        <span class="value">@ActiveProbes <small>/ @_status.Probes.Count</small></span>
+    </div>
+</section>
+
+@if (_status.Probes.Count == 0)
+{
+    <p>Aucune télémétrie reçue pour l'instant. Lancez le simulateur depuis le dashboard Aspire.</p>
+}
+else
+{
+    <table class="probes">
+        <thead>
+            <tr>
+                <th>Sonde</th>
+                <th>Paquets</th>
+                <th>Dernière mesure</th>
+                <th>Heure de bord</th>
+                <th>5 premières minutes de vol</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var probe in _status.Probes)
+            {
+                <tr class="@(IsActive(probe) ? "active" : null)">
+                    <td>@probe.Name</td>
+                    <td>@probe.Packets.ToString("N0")</td>
+                    <td>@probe.LastValue</td>
+                    <td>@probe.LastAt.ToString("dd/MM HH:mm:ss")</td>
+                    <td>@_launchWindows.GetValueOrDefault(probe.Name).ToString("N0") paquets</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private static readonly TimeSpan RefreshPeriod = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan ActivityWindow = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan FlightStart = TimeSpan.FromMinutes(5);
+
+    private readonly CancellationTokenSource _stop = new();
+    private TelemetryStatus _status = new(0, []);
+    private Dictionary<string, int> _launchWindows = [];
+    private double _packetsPerSecond;
+    private DateTimeOffset _lastSampleAt;
+
+    private int ActiveProbes => _status.Probes.Count(IsActive);
+
+    private bool IsActive(ProbeTelemetry probe) => Clock.GetUtcNow() - probe.LastReceivedAt < ActivityWindow;
+
+    protected override void OnInitialized() => Sample();
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ = RefreshAsync();
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        using var timer = new PeriodicTimer(RefreshPeriod);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_stop.Token))
+            {
+                Sample();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void Sample()
+    {
+        var now = Clock.GetUtcNow();
+        var previous = _status.Packets;
+        _status = Store.GetStatus();
+
+        var elapsed = now - _lastSampleAt;
+        _packetsPerSecond = _lastSampleAt == default || elapsed <= TimeSpan.Zero ? 0 : (_status.Packets - previous) / elapsed.TotalSeconds;
+        _lastSampleAt = now;
+
+        _launchWindows = _status.Probes.ToDictionary(p => p.Name, p => FirstMinutes(p.Name));
+    }
+
+    /// <summary>Nombre de paquets mesurés pendant les 5 premières minutes de vol de la sonde.</summary>
+    private int FirstMinutes(string probe)
+    {
+        if (Store.GetLaunchRecord(probe) is not { Count: > 0 } packets)
+        {
+            return 0;
+        }
+
+        var takeOff = packets.Min(p => p.Timestamp);
+        return packets[takeOff, takeOff + FlightStart].Count;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _stop.CancelAsync();
+        _stop.Dispose();
+    }
+}

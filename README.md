@@ -37,6 +37,21 @@ dotnet watch --project src/MissionControl.AppHost
 
 Modifiez par exemple `src/MissionControl.Api/Components/Pages/Home.razor` : la modification est appliquée sans redémarrer.
 
+### Envoyer de la télémétrie
+
+La ressource `simulator` du dashboard Aspire ne démarre pas toute seule : cliquez sur ▶ pour envoyer un million de paquets JSONL à l'API, puis suivez l'import sur la page **Télémétrie** (`/telemetrie`) de l'application web.
+
+Le simulateur se lance aussi à la main :
+
+```bash
+dotnet run --project tools/ProbeSimulator -- --format jsonl --compression none --count 1000000 --seed 42 --url http://localhost:5011
+dotnet run --project tools/ProbeSimulator -- --format cbor --url http://localhost:5011
+```
+
+`--format json` envoie à la place le catalogue d'astéroïdes, un seul document JSON qui embarque les mêmes relevés ; le catalogue importé se consulte via `GET /telemetry/catalog`.
+
+Avec `--compression zstd`, le body est compressé au fil de l'envoi (`Content-Encoding: zstd`) et l'API le décompresse avant de le lire, quel que soit le format.
+
 ### Lancer les tests
 
 ```bash
@@ -52,6 +67,8 @@ MissionControl.slnx
 ├─ src/MissionControl.AppHost          Aspire : orchestre l'application, dashboard
 ├─ src/MissionControl.ServiceDefaults  OpenTelemetry, health checks, résilience
 ├─ src/MissionControl.Api              Minimal API + Blazor Interactive Server, store en mémoire
+├─ src/MissionControl.Telemetry        formats de télémétrie partagés (paquet, lecteurs et écrivains)
+├─ tools/ProbeSimulator                console : génère et envoie la télémétrie des sondes
 └─ tests/MissionControl.Tests          xUnit v3 (Microsoft.Testing.Platform)
 ```
 
