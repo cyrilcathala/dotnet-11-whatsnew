@@ -19,6 +19,12 @@
     les imports du banc sont lancés <strong>en séquence</strong>, jamais en parallèle.
     Lancez <code>ProbeSimulator --format all --compression both</code> pour remplir les 6 lignes avec la même graine.</span>
 </p>
+<p class="banner tone-signal caveat">
+    <strong>Journal de bord</strong>
+    <span>Chaque import écrit aussi les paquets reçus dans le <strong>journal de bord sur disque</strong> :
+    ce coût est le même pour les 6 lignes, la comparaison reste équitable, mais les valeurs absolues
+    (allocations, CPU, durée, débit) l'incluent.</span>
+</p>
 
 <div class="table-scroll bench">
     <table>
