@@ -24,6 +24,9 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
     // Sondes autodétruites, avec l'heure de leur dernier contact.
     private readonly ConcurrentDictionary<string, DateTimeOffset> _lostProbes = new(StringComparer.OrdinalIgnoreCase);
 
+    // Sondes déjà contactées au moins une fois.
+    private readonly ConcurrentDictionary<string, bool> _contactedProbes = new(StringComparer.OrdinalIgnoreCase);
+
     // Identifiants déjà envoyés : le rapport de mission rapproche commandes et accusés par identifiant.
     private readonly ConcurrentDictionary<Guid, bool> _sentIds = new();
 
@@ -39,6 +42,10 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
         if (command.Id == Guid.Empty) command = command with { Id = Guid.CreateVersion7() };
         if (!_sentIds.TryAdd(command.Id, true))
             return SendStatus.DuplicateId;
+
+        // Au premier contact, la sonde se signale d'elle-même : un accusé qui ne répond à aucune commande.
+        if (_contactedProbes.TryAdd(command.ProbeName, true))
+            history.RecordUnsolicited(command.ProbeName, new Acknowledged(Guid.CreateVersion7(), clock.GetUtcNow()));
 
         // Hiérarchie fermée : les quatre cas suffisent, aucune branche default.
         result = _lostProbes.TryGetValue(command.ProbeName, out var lastContact)
