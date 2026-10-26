@@ -7,6 +7,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/MissionControl.Api/MissionControl.Api.csproj" />
+    <Project Path="src/MissionControl.ServiceDefaults/MissionControl.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MissionControl.Tests/MissionControl.Tests.csproj" />
