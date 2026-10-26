@@ -1,0 +1,15 @@
+<Project>
+
+  <!--
+    🆕 .NET 11 : Runtime Async. Sur la RC3, le compilateur génère encore des state machines par défaut ;
+    on active la fonctionnalité pour la cible net11.0 uniquement (le runtime .NET 10 ne sait pas l'exécuter).
+
+    Le réglage vit ici plutôt que dans Houston.csproj : BenchmarkDotNet recopie les PropertyGroup du .csproj
+    dans ses projets générés en perdant la condition, ce qui activait Runtime Async pour le job .NET 10.
+    Ce fichier s'applique aussi aux projets générés dans .bdn/, avec la bonne condition.
+  -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net11.0'">
+    <Features>$(Features);runtime-async=on</Features>
+  </PropertyGroup>
+
+</Project>

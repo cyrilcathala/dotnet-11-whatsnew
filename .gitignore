@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Projets générés par BenchmarkDotNet (tools/Houston)
+.bdn/
