@@ -17,9 +17,16 @@ public sealed class CommandHistory
         get { lock (_lock) return [.. _entries]; }
     }
 
-    public IReadOnlyList<ProbeCommand> Commands => [.. Entries.Select(e => e.Command)];
+    // Une seule copie, faite sous le verrou (et non une copie des entrées, puis une autre des commandes).
+    public IReadOnlyList<ProbeCommand> Commands
+    {
+        get { lock (_lock) return [.. _entries.Select(e => e.Command)]; }
+    }
 
-    public IReadOnlyList<CommandResult> Results => [.. Entries.Select(e => e.Result)];
+    public IReadOnlyList<CommandResult> Results
+    {
+        get { lock (_lock) return [.. _entries.Select(e => e.Result)]; }
+    }
 
     public void Record(ProbeCommand command, CommandResult result)
     {
