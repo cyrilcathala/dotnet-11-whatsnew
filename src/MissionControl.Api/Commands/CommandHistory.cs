@@ -3,6 +3,9 @@ namespace MissionControl.Api.Commands;
 /// <summary>Une commande envoyée et le résultat obtenu.</summary>
 public sealed record CommandLogEntry(ProbeCommand Command, CommandResult Result);
 
+/// <summary>Un accusé de réception envoyé par la sonde sans qu'aucune commande ne l'ait demandé.</summary>
+public sealed record UnsolicitedAck(string ProbeName, Acknowledged Ack);
+
 /// <summary>
 /// Historique en mémoire des commandes envoyées et des accusés de réception (résultats) obtenus.
 /// Thread-safe, enregistré en singleton ; relu par le rapport de mission.
@@ -24,5 +27,17 @@ public sealed class CommandHistory
     public void Record(ProbeCommand command, CommandResult result)
     {
         lock (_lock) _entries.Add(new(command, result));
+    }
+
+    private readonly List<UnsolicitedAck> _unsolicited = [];
+
+    public IReadOnlyList<UnsolicitedAck> Unsolicited
+    {
+        get { lock (_lock) return [.. _unsolicited]; }
+    }
+
+    public void RecordUnsolicited(string probeName, Acknowledged ack)
+    {
+        lock (_lock) _unsolicited.Add(new(probeName, ack));
     }
 }

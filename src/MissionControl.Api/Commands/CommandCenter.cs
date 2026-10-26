@@ -16,6 +16,9 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
     // Sondes autodétruites, avec l'heure de leur dernier contact.
     private readonly ConcurrentDictionary<string, DateTimeOffset> _lostProbes = new(StringComparer.OrdinalIgnoreCase);
 
+    // Sondes déjà contactées au moins une fois.
+    private readonly ConcurrentDictionary<string, bool> _contactedProbes = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Envoie la commande ; <c>false</c> si la sonde n'est pas dans la flotte.</summary>
     public bool TrySend(ProbeCommand command, out CommandResult result)
     {
@@ -24,6 +27,10 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
             result = default;
             return false;
         }
+
+        // Au premier contact, la sonde se signale d'elle-même : un accusé qui ne répond à aucune commande.
+        if (_contactedProbes.TryAdd(command.ProbeName, true))
+            history.RecordUnsolicited(command.ProbeName, new Acknowledged(Guid.CreateVersion7(), clock.GetUtcNow()));
 
         if (command.Id == Guid.Empty) command = command with { Id = Guid.CreateVersion7() };
 
