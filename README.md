@@ -45,6 +45,7 @@ Le simulateur se lance aussi à la main :
 
 ```bash
 dotnet run --project tools/ProbeSimulator -- --format jsonl --compression none --count 1000000 --seed 42 --url http://localhost:5011
+dotnet run --project tools/ProbeSimulator -- --format cbor --url http://localhost:5011
 ```
 
 ### Lancer les tests

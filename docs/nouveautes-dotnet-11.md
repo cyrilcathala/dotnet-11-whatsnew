@@ -36,6 +36,15 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
 - 🆕 `ZstandardStream` dans `System.IO.Compression`
 - ❓ Décompression zstd côté ASP.NET Core (natif ou `IDecompressionProvider` maison)
 - 🆕 `CborReader` incrémental (`isFinalBlock: false` + `SlideData`)
+  - `CborTelemetryFormat` : `CborReader` en `Lax` (obligatoire avec `isFinalBlock: false`), `AllowMultipleRootLevelValues`, une map par paquet. Seuls les paquets complets sont décodés (`TrySkipValue` renvoie `false` sans bouger sur un paquet coupé, état `NeedsMoreData`) ; on rend au `PipeReader` ce qui est consommé, puis `SlideData` sur le tampon suivant, qui commence par les octets non lus. Dernier bloc : `isFinalBlock: true`
+  - Chaque paquet complet est relu par un second `CborReader` réutilisé via `Reset(slice, isFinalBlock: true)`
+  - ⚠️ Lire un élément tronqué (`ReadTextString()` en `NeedsMoreData`) lève `CborContentException` : on ne décode pas champ par champ à travers les morceaux
+  - Test : body écrit en morceaux de 1 à 37 octets avec flush entre chaque = même état qu'en un seul bloc, et même état qu'en JSONL
+  - Vérifié à la main (Release, HTTP/1.1) : working set de l'API 150 Mo (200 000 paquets), 152 Mo (1 million), 177 Mo (5 millions) ; ~420 000 à 665 000 paquets/s
+  - `System.Formats.Cbor` est dans le framework partagé ASP.NET Core ; la bibliothèque partagée et le simulateur ont besoin du package `System.Formats.Cbor` 11.0.0-rc.3
+- 🆕 C# 15 : `union SensorValue(double, string, bool)` dans les paquets (cas JSON choisi d'après le type de token, sans convertisseur ; en CBOR, entier/flottant → `double`, texte → `string`, booléen → `bool`)
+  - ⚠️ Écart : avec les options JSON « web » (Minimal APIs, `NumberHandling = AllowReadingFromString`), `"ok"` est ambigu entre `double` et `string`. `[JsonNumberHandling(JsonNumberHandling.Strict)]` posé sur l'union suffit (vérifié via `POST /telemetry/packets`), pas besoin de toucher aux options globales
+  - Une union peut redéfinir `ToString()` dans son corps (affichage du tableau de bord)
 - 🆕 Stream adapters sans copie : `ReadOnlySequenceStream`, `ReadOnlyMemoryStream`, `WritableMemoryStream`, `StringStream`
 - 🆕 `System.IO.Pipelines` : moins de contention lecteur/écrivain (interne)
 - 🔁 `JsonSerializer.DeserializeAsync(PipeReader)` / `Request.BodyReader`
