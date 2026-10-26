@@ -1,8 +1,11 @@
+using MissionControl.Api;
 using MissionControl.Api.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+builder.Services.AddSingleton<MissionStore>();
 
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
 {
