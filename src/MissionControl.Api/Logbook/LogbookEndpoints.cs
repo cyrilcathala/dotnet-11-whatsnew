@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using MissionControl.Telemetry;
 
 namespace MissionControl.Api.Logbook;
@@ -31,12 +30,8 @@ public static class LogbookEndpoints
         await JsonSerializer.SerializeAsyncEnumerable(
             context.Response.BodyWriter,
             logbook.ReadAsync(cancellationToken),
-            LogbookJsonContext.Default.TelemetryPacket,
+            TelemetryJsonContext.Default.TelemetryPacket,
             topLevelValues: true,
             cancellationToken);
     }
 }
-
-/// <summary>Contrat JSON des entrées exportées (le même que celui de l'import JSONL).</summary>
-[JsonSerializable(typeof(TelemetryPacket))]
-internal sealed partial class LogbookJsonContext : JsonSerializerContext;
