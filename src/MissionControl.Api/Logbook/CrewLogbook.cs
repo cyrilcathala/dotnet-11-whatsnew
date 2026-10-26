@@ -1,33 +1,219 @@
+using System.Buffers;
 using System.Runtime.CompilerServices;
-using MissionControl.Api.Telemetry;
+using System.Text.Json;
+using Microsoft.Extensions.Options;
 using MissionControl.Telemetry;
 
 namespace MissionControl.Api.Logbook;
 
-/// <summary>
-/// Journal de bord : les entrées conservées par la station, sonde par sonde (ordre alphabétique),
-/// chacune dans l'ordre de réception. Ce sont les paquets JSONL reçus, si bien qu'un export
-/// peut être réimporté tel quel par <c>POST /telemetry/import</c>.
-/// </summary>
-public sealed class CrewLogbook(TelemetryStore store)
+/// <summary>Où la station range son journal de bord (section <c>Logbook</c> de la configuration).</summary>
+public sealed class LogbookOptions
 {
     /// <summary>
-    /// Parcourt le journal au fil de l'eau : une seule sonde est copiée hors du verrou à la fois,
-    /// le journal complet n'est jamais matérialisé.
+    /// Dossier racine. Chaque instance de l'application y crée son propre sous-dossier,
+    /// supprimé à l'arrêt. Par défaut : le dossier temporaire du système.
+    /// </summary>
+    public string? Directory { get; set; }
+}
+
+/// <summary>
+/// Journal de bord : tous les paquets reçus par import, dans l'ordre de réception, ajoutés lot par lot
+/// à un fichier JSON Lines sur disque (append-only). Un export peut être réimporté tel quel
+/// par <c>POST /telemetry/import</c>. La mémoire ne dépend pas de la taille du journal.
+/// </summary>
+public sealed class CrewLogbook : IDisposable
+{
+    private readonly string _directory;
+    private readonly string _path;
+    private readonly FileStream _file;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly ArrayBufferWriter<byte> _buffer = new(64 * 1024);
+    private readonly Utf8JsonWriter _json;
+
+    // Longueur des lignes complètes déjà écrites : un export ne lit jamais au-delà.
+    private long _length;
+
+    public CrewLogbook(IOptions<LogbookOptions> options)
+    {
+        var root = Path.Combine(
+            options.Value.Directory is { Length: > 0 } configured ? configured : Path.GetTempPath(), "mission-control");
+        DeleteOrphans(root);
+        _directory = Path.Combine(root, $"logbook-{Environment.ProcessId}-{Guid.NewGuid():N}");
+        System.IO.Directory.CreateDirectory(_directory);
+        _path = Path.Combine(_directory, "journal-de-bord.jsonl");
+
+        _file = new FileStream(_path, new FileStreamOptions
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.Write,
+            Share = FileShare.Read | FileShare.Delete,
+            Options = FileOptions.Asynchronous,
+        });
+        _json = new Utf8JsonWriter(_buffer);
+    }
+
+    /// <summary>Ajoute un lot de paquets en fin de journal (une seule écriture disque par lot).</summary>
+    public async Task AppendAsync(IReadOnlyList<TelemetryPacket> batch)
+    {
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        await _gate.WaitAsync();
+        try
+        {
+            _buffer.ResetWrittenCount();
+            foreach (var packet in batch)
+            {
+                JsonSerializer.Serialize(_json, packet, TelemetryJsonContext.Default.TelemetryPacket);
+                _json.Flush();
+                _json.Reset();
+                _buffer.Write("\n"u8);
+            }
+
+            // Pas d'annulation en cours d'écriture : une ligne à moitié écrite corromprait le journal.
+            await _file.WriteAsync(_buffer.WrittenMemory, CancellationToken.None);
+            await _file.FlushAsync(CancellationToken.None);
+            Volatile.Write(ref _length, _file.Position);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Relit le journal au fil de l'eau, tel qu'il était au début de la lecture :
+    /// les lots ajoutés pendant un export n'y figurent pas, aucune ligne n'est coupée.
     /// </summary>
     public async IAsyncEnumerable<TelemetryPacket> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        foreach (var probe in store.GetStatus().Probes)
+        var length = Volatile.Read(ref _length);
+        if (length == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            foreach (var entry in store.GetLaunchRecord(probe.Name) ?? [])
-            {
-                yield return entry;
-            }
-
-            // Laisse le sérialiseur vider son tampon vers la réponse entre deux sondes.
-            await Task.Yield();
+            yield break;
         }
+
+        await using var file = new FileStream(_path, new FileStreamOptions
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.ReadWrite | FileShare.Delete,
+            Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
+        });
+        await using var snapshot = new BoundedStream(file, length);
+
+        // 🔁 Rappel .NET 10 : lecture valeur par valeur d'un flux JSON Lines (topLevelValues).
+        var packets = JsonSerializer.DeserializeAsyncEnumerable(
+            snapshot, TelemetryJsonContext.Default.TelemetryPacket, topLevelValues: true, cancellationToken);
+
+        await foreach (var packet in packets)
+        {
+            if (packet is not null)
+            {
+                yield return packet;
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _json.Dispose();
+        _file.Dispose();
+        _gate.Dispose();
+        TryDelete(_directory);
+    }
+
+    /// <summary>
+    /// Supprime les journaux laissés par une station arrêtée brutalement (processus disparu) :
+    /// le dossier porte le numéro du processus qui l'a créé.
+    /// </summary>
+    private static void DeleteOrphans(string root)
+    {
+        if (!System.IO.Directory.Exists(root))
+        {
+            return;
+        }
+
+        foreach (var directory in System.IO.Directory.EnumerateDirectories(root, "logbook-*"))
+        {
+            var parts = Path.GetFileName(directory).Split('-');
+            if (parts.Length == 3 && int.TryParse(parts[1], out var processId) && !IsRunning(processId))
+            {
+                TryDelete(directory);
+            }
+        }
+    }
+
+    private static bool IsRunning(int processId)
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById(processId);
+            return !process.HasExited;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // Processus d'un autre utilisateur : dans le doute, on n'y touche pas.
+            return true;
+        }
+    }
+
+    private static void TryDelete(string directory)
+    {
+        try
+        {
+            System.IO.Directory.Delete(directory, recursive: true);
+        }
+        catch (IOException)
+        {
+            // Un export encore en cours garde le fichier ouvert : le système de fichiers le libérera.
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    /// <summary>Lecture seule, limitée aux <paramref name="length"/> premiers octets du flux.</summary>
+    private sealed class BoundedStream(Stream inner, long length) : Stream
+    {
+        private long _remaining = length;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
+
+        public override int Read(Span<byte> buffer)
+        {
+            var read = inner.Read(buffer[..Limit(buffer.Length)]);
+            _remaining -= read;
+            return read;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            var read = await inner.ReadAsync(buffer[..Limit(buffer.Length)], cancellationToken);
+            _remaining -= read;
+            return read;
+        }
+
+        private int Limit(int requested) => (int)Math.Min(requested, _remaining);
+
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }
