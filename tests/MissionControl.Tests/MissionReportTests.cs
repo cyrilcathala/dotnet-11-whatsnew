@@ -78,6 +78,24 @@ public sealed class MissionReportTests(WebApplicationFactory<Program> factory)
         Assert.Contains("\"category\":\"orphan\"", json);
     }
 
+    [Fact]
+    public async Task Report_page_shows_the_three_categories_in_french()
+    {
+        var probe = await RegisterProbeAsync();
+        await SendAsync(new CapturePhoto(Guid.Empty, probe, "Ganymède"));
+        await SendAsync(new Rotate(Guid.Empty, probe, Attitude: 170));
+
+        var html = WebUtility.HtmlDecode(await _client.GetStringAsync("/rapport", Ct));
+
+        Assert.Contains("Rapport de mission", html);
+        Assert.Contains(probe, html);
+        Assert.Contains("photo de « Ganymède »", html);
+        Assert.Contains("rotation vers 170°", html);
+        Assert.Contains("Appariée", html);
+        Assert.Contains("Commande sans accusé", html);
+        Assert.Contains("Accusé orphelin", html);
+    }
+
     private async Task<ReportLine[]> GetReportAsync(string probe)
     {
         var report = await _client.GetFromJsonAsync<ReportLine[]>("/mission/report", Ct);

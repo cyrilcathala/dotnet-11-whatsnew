@@ -1,0 +1,77 @@
+@page "/rapport"
+@rendermode InteractiveServer
+@using MissionControl.Api.Commands
+@using MissionControl.Api.Report
+@inject MissionReport MissionReport
+
+<PageTitle>Rapport — Mission Control</PageTitle>
+
+<h1>Rapport de mission</h1>
+
+<p>
+    <button class="btn" @onclick="Refresh">Actualiser</button>
+</p>
+
+@if (_lines is [])
+{
+    <p>Aucune commande ni aucun accusé de réception : <a href="commandes">envoyez une commande</a>.</p>
+}
+else
+{
+    <ul class="summary">
+        @foreach (var category in Enum.GetValues<ReportCategory>())
+        {
+            var (css, label) = Describe(category);
+            <li class="@css"><strong>@_lines.Count(l => l.Category == category)</strong> @label</li>
+        }
+    </ul>
+
+    <table>
+        <thead>
+            <tr><th>Catégorie</th><th>Sonde</th><th>Commande</th><th>Accusé de réception</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var line in _lines)
+            {
+                var (css, label) = Describe(line.Category);
+                <tr>
+                    <td class="@css">@label</td>
+                    <td>@line.ProbeName</td>
+                    <td>@(line.Command is { } command ? Describe(command) : "—")</td>
+                    <td>@(line.Acknowledgement is { } ack ? Describe(ack) : "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<ReportLine> _lines = [];
+
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh() => _lines = MissionReport.Build();
+
+    private static (string Css, string Label) Describe(ReportCategory category) => category switch
+    {
+        ReportCategory.Matched => ("matched", "Appariée"),
+        ReportCategory.Unacknowledged => ("unacknowledged", "Commande sans accusé"),
+        ReportCategory.Orphan => ("orphan", "Accusé orphelin"),
+        _ => throw new ArgumentOutOfRangeException(nameof(category)),
+    };
+
+    private static string Describe(ProbeCommand command) => command switch
+    {
+        Thrust t => $"poussée de {t.DeltaV} m/s",
+        Rotate r => $"rotation vers {r.Attitude}°",
+        CapturePhoto p => $"photo de « {p.Target} »",
+        SelfDestruct => "autodestruction",
+    };
+
+    private static string Describe(CommandResult ack) => ack switch
+    {
+        Acknowledged a => $"exécutée à {a.ProbeTime.ToLocalTime():T}",
+        Rejected r => $"refusée : {r.Reason}",
+        TimedOut or ProbeLost => "—",
+    };
+}
