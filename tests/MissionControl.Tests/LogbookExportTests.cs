@@ -132,6 +132,30 @@ public sealed class LogbookExportTests : IAsyncDisposable
         }
     }
 
+    [Fact]
+    public async Task Station_cleans_up_the_logbook_of_a_station_that_was_killed()
+    {
+        var root = Directory.CreateTempSubdirectory("mission-control-tests-");
+        try
+        {
+            // Une station tuée sans arrêt propre (processus disparu) a laissé son journal derrière elle.
+            var orphan = Directory.CreateDirectory(Path.Combine(root.FullName, "mission-control", $"logbook-{int.MaxValue}-dead"));
+            await File.WriteAllTextAsync(Path.Combine(orphan.FullName, "journal-de-bord.jsonl"), "{}\n", Ct);
+
+            await using (var station = _factory.WithWebHostBuilder(host => host.UseSetting("Logbook:Directory", root.FullName)))
+            {
+                using var client = station.CreateClient();
+                Assert.Equal("", await client.GetStringAsync("/logbook/export", Ct));
+            }
+
+            Assert.False(Directory.Exists(orphan.FullName));
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         _client.Dispose();
