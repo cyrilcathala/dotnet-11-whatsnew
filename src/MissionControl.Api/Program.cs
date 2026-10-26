@@ -2,6 +2,8 @@ using MissionControl.Api.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
 {
     document.Info.Title = "Mission Control";
@@ -21,6 +23,7 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.MapDefaultEndpoints();
 app.MapOpenApi();
 
 app.MapStaticAssets();

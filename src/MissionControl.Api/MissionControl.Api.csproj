@@ -8,4 +8,8 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MissionControl.ServiceDefaults\MissionControl.ServiceDefaults.csproj" />
+  </ItemGroup>
+
 </Project>

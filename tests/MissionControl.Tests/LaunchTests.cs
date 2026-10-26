@@ -20,6 +20,17 @@ public sealed class LaunchTests(WebApplicationFactory<Program> factory)
         Assert.Contains("Bienvenue au centre de contrôle", html);
     }
 
+    [Theory]
+    [InlineData("/health")]
+    [InlineData("/alive")]
+    public async Task Api_reports_itself_healthy(string endpoint)
+    {
+        var response = await _client.GetAsync(endpoint, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task Api_publishes_its_openapi_document()
     {
