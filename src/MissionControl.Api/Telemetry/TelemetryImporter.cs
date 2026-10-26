@@ -17,7 +17,7 @@ public interface ITelemetryImporter
 public sealed record ImportSummary(string Format, long Packets, int Probes, TimeSpan Duration, double PacketsPerSecond);
 
 /// <summary>Lit les paquets au fil de l'eau et alimente le store par lots.</summary>
-public sealed class TelemetryImporter(TelemetryStore store) : ITelemetryImporter
+public sealed class TelemetryImporter(TelemetryStore store, AsteroidCatalogStore catalogs) : ITelemetryImporter
 {
     public const int BatchSize = 1024;
 
@@ -30,7 +30,16 @@ public sealed class TelemetryImporter(TelemetryStore store) : ITelemetryImporter
         // 🆕 C# 15 : collection expression avec arguments, la capacité du tampon est fixée dès la création.
         List<TelemetryPacket> batch = [with(capacity: BatchSize)];
 
-        await foreach (var packet in format.ReadAsync(body, cancellationToken))
+        var source = format.ReadAsync(body, cancellationToken);
+        if (format is AsteroidCatalogJsonFormat json)
+        {
+            // Le catalogue est un seul document : lu en entier, son en-tête est conservé, ses relevés importés.
+            var catalog = await json.ReadCatalogAsync(body, cancellationToken);
+            catalogs.Record(catalog);
+            source = catalog.Observations.ToAsyncEnumerable();
+        }
+
+        await foreach (var packet in source)
         {
             batch.Add(packet);
             probes.Add(packet.Probe);

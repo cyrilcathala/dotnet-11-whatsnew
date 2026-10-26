@@ -11,6 +11,7 @@ public static class TelemetryEndpoints
     {
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<TelemetryStore>();
+        services.AddSingleton<AsteroidCatalogStore>();
         services.AddSingleton<ITelemetryImporter, TelemetryImporter>();
         return services;
     }
@@ -23,6 +24,7 @@ public static class TelemetryEndpoints
         telemetry.MapPost("/packets", AppendPacket).DisableAntiforgery();
         telemetry.MapGet("/", (TelemetryStore store) => store.GetStatus());
         telemetry.MapGet("/probes/{probe}/launch", GetLaunchWindow);
+        telemetry.MapGet("/catalog", GetCatalog);
 
         return app;
     }
@@ -73,6 +75,12 @@ public static class TelemetryEndpoints
         var to = from.AddMinutes(minutes);
         return TypedResults.Ok(new LaunchWindow(record[0].Probe, from, to, record[from, to]));
     }
+
+    /// <summary>Le dernier catalogue d'astéroïdes importé en JSON.</summary>
+    private static Results<Ok<ImportedCatalog>, ProblemHttpResult> GetCatalog(AsteroidCatalogStore catalogs)
+        => catalogs.Current is { } catalog
+            ? TypedResults.Ok(catalog)
+            : TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Aucun catalogue d'astéroïdes importé");
 }
 
 public sealed record LaunchWindow(string Probe, DateTimeOffset From, DateTimeOffset To, IReadOnlyList<TelemetryPacket> Packets);

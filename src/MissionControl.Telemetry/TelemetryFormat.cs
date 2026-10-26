@@ -28,7 +28,9 @@ public static class TelemetryFormats
 
     public static ITelemetryFormat Cbor { get; } = new CborTelemetryFormat();
 
-    public static IReadOnlyList<ITelemetryFormat> All { get; } = [JsonLines, Cbor];
+    public static AsteroidCatalogJsonFormat Json { get; } = new();
+
+    public static IReadOnlyList<ITelemetryFormat> All { get; } = [JsonLines, Cbor, Json];
 
     public static ITelemetryFormat? FindByName(string name)
         => All.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
