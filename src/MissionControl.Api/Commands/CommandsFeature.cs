@@ -23,6 +23,9 @@ public static class CommandsFeature
 
         commands.MapGet("/", (CommandHistory history) => history.Entries);
 
+        commands.MapGet("/{id:guid}", Results<Ok<ProbeCommand>, NotFound> (Guid id, CommandHistory history) =>
+            history.Commands[id] is { } command ? TypedResults.Ok(command) : TypedResults.NotFound());
+
         // 🆕 .NET 11 : l'union CommandResult est décrite en anyOf de ses cas dans le document OpenAPI.
         commands.MapPost("/", Results<Ok<CommandResult>, NotFound<ProblemDetails>> (ProbeCommand command, CommandCenter center) =>
             center.TrySend(command, out var result)

@@ -127,6 +127,25 @@ public sealed class CommandTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task A_sent_command_can_be_retrieved_by_its_id()
+    {
+        var probe = await RegisterProbeAsync();
+        var acknowledged = Assert.IsType<Acknowledged>((await SendAsync(new Rotate(Guid.Empty, probe, Attitude: 30))).Value);
+
+        var command = await _client.GetFromJsonAsync<ProbeCommand>($"/commands/{acknowledged.CommandId}", Ct);
+
+        Assert.Equal(new Rotate(acknowledged.CommandId, probe, 30), command);
+    }
+
+    [Fact]
+    public async Task An_unknown_command_id_is_not_found()
+    {
+        var response = await _client.GetAsync($"/commands/{Guid.NewGuid()}", Ct);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Openapi_describes_the_command_result_as_any_of_its_cases()
     {
         using var document = JsonDocument.Parse(await _client.GetStringAsync("/openapi/v1.json", Ct));

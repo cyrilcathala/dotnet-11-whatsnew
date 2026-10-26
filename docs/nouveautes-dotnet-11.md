@@ -32,8 +32,9 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
   - `POST /commands` (`Results<Ok<CommandResult>, NotFound<ProblemDetails>>`) : réponse 200 = `anyOf` des quatre cas, sans `discriminator` ; la requête `ProbeCommand` apparaît aussi en `anyOf`, mais avec `discriminator` sur `kind`
 
 ## 03 — Petits raffinements C# 15
-- 🆕 Collection expression arguments (`[with(...), ..]`)
-- 🆕 Extension indexers
+- 🆕 C# 15 : collection expression arguments — les noms réservés du registre : `HashSet<string> ReservedNames = [with(StringComparer.OrdinalIgnoreCase), "Voyager", "Pioneer", .. HistoricMissions]` (`with(...)` en premier élément, arguments passés au constructeur)
+- 🆕 C# 15 : extension indexers — `extension(IEnumerable<ProbeCommand> history) { public ProbeCommand? this[Guid commandId] }` ; utilisé par `GET /commands/{id}` (`history.Commands[id]`, 404 si inconnue)
+  - ℹ️ Pas de conflit avec l'indexeur `this[int]` de `IReadOnlyList<T>` : le type du paramètre (`Guid`) diffère
 
 ## 04 — Pluie de télémétrie (import JSON / JSONL / CBOR)
 - 🆕 `ZstandardCompressedContent` (compression du body de requête côté `HttpClient`)
