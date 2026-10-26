@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NameRequired" xml:space="preserve">
+    <value>Le nom de la sonde est obligatoire.</value>
+  </data>
+  <data name="NameTaken" xml:space="preserve">
+    <value>Ce nom de sonde est déjà pris.</value>
+  </data>
+  <data name="LaunchWindowInverted" xml:space="preserve">
+    <value>La fenêtre de lancement doit se fermer après son ouverture.</value>
+  </data>
+  <data name="LaunchWindowUnavailable" xml:space="preserve">
+    <value>La station sol n'est pas disponible sur cette fenêtre de lancement.</value>
+  </data>
+</root>
