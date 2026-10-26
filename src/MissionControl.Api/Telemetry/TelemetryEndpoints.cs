@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MissionControl.Telemetry;
 
@@ -19,7 +20,9 @@ public static class TelemetryEndpoints
     {
         var telemetry = app.MapGroup("/telemetry").WithTags("Télémétrie");
 
-        telemetry.MapPost("/import", ImportAsync).DisableAntiforgery();
+        // La limite de taille s'applique aussi au body décompressé : elle est levée pour tout l'endpoint.
+        telemetry.MapPost("/import", ImportAsync).DisableAntiforgery()
+            .WithMetadata(new DisableRequestSizeLimitAttribute());
         telemetry.MapGet("/", (TelemetryStore store) => store.GetStatus());
         telemetry.MapGet("/probes/{probe}/launch", GetLaunchWindow);
 
@@ -33,6 +36,16 @@ public static class TelemetryEndpoints
     private static async Task<Results<Ok<ImportSummary>, ProblemHttpResult>> ImportAsync(
         HttpContext context, ITelemetryImporter importer, CancellationToken cancellationToken)
     {
+        // Le middleware RequestDecompression retire l'en-tête quand il a décompressé le body :
+        // s'il est encore là, aucun décompresseur ne correspondait.
+        if (context.Request.Headers.ContentEncoding is { Count: > 0 } encoding)
+        {
+            return TypedResults.Problem(
+                statusCode: StatusCodes.Status415UnsupportedMediaType,
+                title: "Compression non prise en charge",
+                detail: $"Content-Encoding reçu : {encoding}. Encodage accepté : zstd (br, gzip et deflate aussi), un seul à la fois, ou body non compressé.");
+        }
+
         if (TelemetryFormats.FindByMediaType(context.Request.ContentType) is not { } format)
         {
             return TypedResults.Problem(
@@ -47,7 +60,27 @@ public static class TelemetryEndpoints
             limit.MaxRequestBodySize = null;
         }
 
-        return TypedResults.Ok(await importer.ImportAsync(context.Request.BodyReader, format, cancellationToken));
+        var body = context.Request.BodyReader;
+        try
+        {
+            if (await UndeclaredZstd.DetectAsync(body, cancellationToken) is { } preview)
+            {
+                return TypedResults.Problem(
+                    statusCode: StatusCodes.Status415UnsupportedMediaType,
+                    title: "Body compressé sans Content-Encoding",
+                    detail: $"Le body est une trame zstd : ajoutez l'en-tête Content-Encoding: zstd. Début du contenu décompressé : {preview}");
+            }
+
+            return TypedResults.Ok(await importer.ImportAsync(body, format, cancellationToken));
+        }
+        catch (InvalidDataException exception)
+        {
+            // Levée par le flux de décompression du middleware quand le body zstd est corrompu.
+            return TypedResults.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Body compressé illisible",
+                detail: $"La décompression a échoué ({exception.Message}). Les paquets lus avant l'erreur sont conservés.");
+        }
     }
 
     /// <summary>Les premières minutes de vol d'une sonde, extraites de son enregistrement de début de vol.</summary>
