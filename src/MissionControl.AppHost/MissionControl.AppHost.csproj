@@ -1,0 +1,14 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.4">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>7d3f4e1a-5b2c-4f8e-9a61-0c2d7e5b9f13</UserSecretsId>
+    <!-- Lancement via `dotnet run` / `dotnet watch` sans la CLI Aspire : DCP et dashboard viennent des packages NuGet. -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MissionControl.Api\MissionControl.Api.csproj" />
+  </ItemGroup>
+
+</Project>
