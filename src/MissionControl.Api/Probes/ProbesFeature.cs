@@ -30,7 +30,8 @@ public static class ProbesFeature
 
         // 🆕 .NET 11 : la validation async (attribut + IAsyncValidatableObject) s'exécute avant le handler.
         // Deux demandes simultanées peuvent passer la validation : l'enregistrement revérifie nom et fenêtre.
-        probes.MapPost("/", (ProbeRegistration registration, ProbeRegistry registry, IStringLocalizer<ValidationMessages> messages) =>
+        probes.MapPost("/", (ProbeRegistration registration, ProbeRegistry registry, GroundStation station,
+            IStringLocalizer<ValidationMessages> messages) =>
         {
             var probe = registration.ToProbe();
             return registry.Register(probe) switch
@@ -41,7 +42,7 @@ public static class ProbesFeature
                 }),
                 RegistrationStatus.WindowTaken => Results.ValidationProblem(new Dictionary<string, string[]>
                 {
-                    [nameof(ProbeRegistration.LaunchWindowOpensAt)] = [registration.WindowUnavailableMessage(messages)],
+                    [nameof(ProbeRegistration.LaunchWindowOpensAt)] = [registration.WindowUnavailableMessage(station, messages)],
                 }),
                 _ => Results.Created($"/probes/{Uri.EscapeDataString(probe.Name)}", probe),
             };

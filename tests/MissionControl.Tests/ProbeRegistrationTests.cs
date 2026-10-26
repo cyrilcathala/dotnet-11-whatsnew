@@ -57,7 +57,30 @@ public sealed class ProbeRegistrationTests(WebApplicationFactory<Program> factor
         var errors = await PostInvalidAsync(overlapping);
 
         Assert.Equal(
-            ["La station sol n'est pas disponible sur cette fenêtre de lancement."],
+            [Unavailable(overlapping.LaunchWindowOpensAt.AddDays(1), overlapping.LaunchWindowClosesAt.AddDays(1))],
+            errors["LaunchWindowOpensAt"]);
+    }
+
+    [Fact]
+    public async Task Next_free_launch_window_skips_every_day_already_booked()
+    {
+        var first = NewRegistration();
+        await RegisterAsync(first);
+        await RegisterAsync(NewRegistration() with
+        {
+            LaunchWindowOpensAt = first.LaunchWindowOpensAt.AddDays(1),
+            LaunchWindowClosesAt = first.LaunchWindowClosesAt.AddDays(1),
+        });
+
+        var overlapping = NewRegistration() with
+        {
+            LaunchWindowOpensAt = first.LaunchWindowOpensAt.AddHours(1),
+            LaunchWindowClosesAt = first.LaunchWindowClosesAt.AddHours(1),
+        };
+        var errors = await PostInvalidAsync(overlapping);
+
+        Assert.Equal(
+            [Unavailable(overlapping.LaunchWindowOpensAt.AddDays(2), overlapping.LaunchWindowClosesAt.AddDays(2))],
             errors["LaunchWindowOpensAt"]);
     }
 
@@ -79,6 +102,9 @@ public sealed class ProbeRegistrationTests(WebApplicationFactory<Program> factor
         var message = Assert.Single(errors["LaunchWindowOpensAt"]);
         Assert.StartsWith("La station sol n'est pas disponible sur cette fenêtre de lancement.", message);
     }
+
+    private static string Unavailable(DateTime nextOpensAt, DateTime nextClosesAt) =>
+        $"La station sol n'est pas disponible sur cette fenêtre de lancement. Prochaine fenêtre libre : {nextOpensAt:yyyy-MM-dd HH:mm} → {nextClosesAt:yyyy-MM-dd HH:mm}.";
 
     [Fact]
     public async Task Missing_name_is_refused_in_french()

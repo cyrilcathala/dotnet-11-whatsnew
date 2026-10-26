@@ -109,7 +109,8 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
 
 ## Bonus en rafale
 - 🆕 `EqualityComparer<T>.Create` (comparateur depuis un sélecteur de clé)
-- 🆕 C# 15 : `break` / `continue` labellisés
+- 🆕 C# 15 : `break` / `continue` labellisés (tag `07-labeled-break`) — la station sol propose la prochaine fenêtre de lancement libre quand celle demandée est prise (`GroundStation.FindNextFreeWindow`) : la fenêtre revient chaque jour à la même heure, `nextDay: for (...)` sur les jours, `foreach` sur la flotte, `continue nextDay;` dès qu'une sonde occupe le créneau, sans drapeau booléen ni `goto`
+  - Visible dans le message de validation de `POST /probes` et du formulaire : « … Prochaine fenêtre libre : 2030-01-09 01:00 → 2030-01-09 07:00. »
 - 🆕 `Process` : helpers run-and-capture
 - 🆕 File-based apps : `#:include`, `dotnet run -e`
 - 🆕 Templates de tests en xUnit v3 sur Microsoft.Testing.Platform, affichage live de `dotnet test`
