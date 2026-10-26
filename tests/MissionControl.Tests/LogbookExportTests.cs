@@ -67,6 +67,23 @@ public sealed class LogbookExportTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Logbook_records_every_reception_including_retransmissions()
+    {
+        const string body = """
+            {"probe":"Juno","seq":0,"at":"2026-11-17T08:00:00+00:00","sensor":"temperature","value":-12.5}
+            {"probe":"Juno","seq":1,"at":"2026-11-17T08:00:01+00:00","sensor":"battery","value":98}
+
+            """;
+        await _client.PostAsync("/telemetry/import", new StringContent(body, Encoding.UTF8, "application/jsonl"), Ct);
+        var exported = await _client.GetStringAsync("/logbook/export", Ct);
+
+        // Le même journal réimporté dans la même station : le journal consigne chaque réception.
+        await _client.PostAsync("/telemetry/import", new StringContent(exported, Encoding.UTF8, "application/jsonl"), Ct);
+
+        Assert.Equal(exported + exported, await _client.GetStringAsync("/logbook/export", Ct));
+    }
+
+    [Fact]
     public async Task Empty_logbook_exports_an_empty_body()
     {
         var response = await _client.GetAsync("/logbook/export", Ct);

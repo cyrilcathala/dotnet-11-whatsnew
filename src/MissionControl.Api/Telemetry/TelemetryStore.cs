@@ -12,6 +12,11 @@ public sealed class TelemetryStore(TimeProvider clock)
     /// <summary>Nombre de paquets conservés par sonde pour l'enregistrement du début de vol.</summary>
     public const int LaunchRecordCapacity = 4096;
 
+    // 🆕 .NET 11 : EqualityComparer<T>.Create avec un sélecteur de clé, sans classe IEqualityComparer<T> écrite à la main.
+    // Un paquet retransmis porte le même numéro de séquence et le même capteur.
+    private static readonly EqualityComparer<TelemetryPacket> SamePacket =
+        EqualityComparer<TelemetryPacket>.Create(p => (p!.Sequence, p.Sensor));
+
     private readonly Lock _gate = new();
     private readonly Dictionary<string, ProbeRecord> _probes = new(StringComparer.OrdinalIgnoreCase);
     private long _packets;
@@ -69,6 +74,7 @@ public sealed class TelemetryStore(TimeProvider clock)
         public SensorValue LastValue { get; private set; }
         public DateTimeOffset LastReceivedAt { get; private set; }
         public List<TelemetryPacket> LaunchRecord { get; } = [];
+        private readonly HashSet<TelemetryPacket> _recorded = new(SamePacket);
 
         public void Add(TelemetryPacket packet, DateTimeOffset receivedAt)
         {
@@ -81,7 +87,7 @@ public sealed class TelemetryStore(TimeProvider clock)
             }
             LastReceivedAt = receivedAt;
 
-            if (LaunchRecord.Count < LaunchRecordCapacity)
+            if (LaunchRecord.Count < LaunchRecordCapacity && _recorded.Add(packet))
             {
                 LaunchRecord.Add(packet);
             }
