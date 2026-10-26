@@ -52,6 +52,16 @@ dotnet run --project tools/ProbeSimulator -- --format cbor --url http://localhos
 
 Avec `--compression zstd`, le body est compressé au fil de l'envoi (`Content-Encoding: zstd`) et l'API le décompresse avant de le lire, quel que soit le format.
 
+### Exporter le journal de bord
+
+Le lien **Exporter le journal de bord (JSONL)** de la page Télémétrie télécharge le journal, diffusé en flux par l'API :
+
+```bash
+curl http://localhost:5011/logbook/export -o journal-de-bord.jsonl
+```
+
+Une entrée par ligne (les paquets conservés pour chaque sonde), au même format que l'import : le fichier se réimporte tel quel avec `POST /telemetry/import`.
+
 ### Lancer les tests
 
 ```bash
