@@ -3,6 +3,14 @@ using MissionControl.Api.Probes;
 
 namespace MissionControl.Api.Commands;
 
+/// <summary>Issue d'un envoi : la commande est partie vers la sonde, ou elle a été refusée avant.</summary>
+public enum SendStatus
+{
+    Sent,
+    UnknownProbe,
+    DuplicateId,
+}
+
 /// <summary>
 /// Centre de commandes : transmet une commande à une sonde de la flotte, simule sa réponse
 /// et l'inscrit dans l'historique.
@@ -16,16 +24,21 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
     // Sondes autodétruites, avec l'heure de leur dernier contact.
     private readonly ConcurrentDictionary<string, DateTimeOffset> _lostProbes = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Envoie la commande ; <c>false</c> si la sonde n'est pas dans la flotte.</summary>
-    public bool TrySend(ProbeCommand command, out CommandResult result)
+    // Identifiants déjà envoyés : le rapport de mission rapproche commandes et accusés par identifiant.
+    private readonly ConcurrentDictionary<Guid, bool> _sentIds = new();
+
+    /// <summary>
+    /// Envoie la commande, sauf si la sonde n'est pas dans la flotte ou si l'identifiant fourni a déjà servi.
+    /// </summary>
+    public SendStatus Send(ProbeCommand command, out CommandResult result)
     {
+        result = default;
         if (!registry.Fleet.Any(p => string.Equals(p.Name, command.ProbeName, StringComparison.OrdinalIgnoreCase)))
-        {
-            result = default;
-            return false;
-        }
+            return SendStatus.UnknownProbe;
 
         if (command.Id == Guid.Empty) command = command with { Id = Guid.CreateVersion7() };
+        if (!_sentIds.TryAdd(command.Id, true))
+            return SendStatus.DuplicateId;
 
         // Hiérarchie fermée : les quatre cas suffisent, aucune branche default.
         result = _lostProbes.TryGetValue(command.ProbeName, out var lastContact)
@@ -39,7 +52,7 @@ public sealed class CommandCenter(ProbeRegistry registry, CommandHistory history
             };
 
         history.Record(command, result);
-        return true;
+        return SendStatus.Sent;
     }
 
     private CommandResult Execute(Thrust thrust) =>
