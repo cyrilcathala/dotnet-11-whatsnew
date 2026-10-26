@@ -72,7 +72,7 @@ Légende : 🆕 nouveau en .NET 11 · 🔁 rappel .NET 10 (montré mais pas nouv
 ## 05 — Rapport de mission
 - 🆕 LINQ `FullJoin` (`Enumerable`) : `GET /mission/report` et la page « Rapport » rapprochent les commandes envoyées des accusés de réception (`MissionReport`)
   - Côté non apparié = `default` : des records des deux côtés pour que `null` signifie « absent » ; ordre de sortie = commandes dans l'ordre, puis accusés orphelins à la fin
-  - 🆕 C# 15 : classement par un `switch` exhaustif sur le tuple `(commande, accusé)` (`(null, null)` → `UnreachableException`) ; ce qui vaut accusé (`Acknowledged`, `Rejected`) se décide par un switch exhaustif sur l'union `CommandResult`
+  - Classement par un `switch` exhaustif sur le tuple `(commande, accusé)` (`(null, null)` → `UnreachableException`) ; ce qui vaut accusé (`Acknowledged`, `Rejected`) se décide par un switch exhaustif sur l'union `CommandResult` (🆕 C# 15, rappel du chapitre 02)
   - Scénario de démo : une photo (appariée), une rotation de 170° (expirée → commande sans accusé), et au premier contact chaque sonde envoie un accusé spontané (orphelin) ; une commande à une sonde autodétruite reste aussi sans accusé
 - 🆕 `JsonSerializer.SerializeAsyncEnumerable` vers un `PipeWriter`, sortie JSON Lines (`topLevelValues: true`)
 
