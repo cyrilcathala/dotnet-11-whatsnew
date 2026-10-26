@@ -9,8 +9,12 @@
     <Project Path="src/MissionControl.AppHost/MissionControl.AppHost.csproj" />
     <Project Path="src/MissionControl.Api/MissionControl.Api.csproj" />
     <Project Path="src/MissionControl.ServiceDefaults/MissionControl.ServiceDefaults.csproj" />
+    <Project Path="src/MissionControl.Telemetry/MissionControl.Telemetry.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MissionControl.Tests/MissionControl.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/ProbeSimulator/ProbeSimulator.csproj" />
   </Folder>
 </Solution>
