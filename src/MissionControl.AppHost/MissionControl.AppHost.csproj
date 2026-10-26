@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MissionControl.Api\MissionControl.Api.csproj" />
+    <ProjectReference Include="..\..\tools\ProbeSimulator\ProbeSimulator.csproj" />
   </ItemGroup>
 
 </Project>
