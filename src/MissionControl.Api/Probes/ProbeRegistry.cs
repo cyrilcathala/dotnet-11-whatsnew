@@ -21,11 +21,11 @@ public sealed class ProbeRegistry
 {
     private static readonly TimeSpan Latency = TimeSpan.FromMilliseconds(600);
 
-    // Réécrit en C# 15 (collection expression avec with(...)) au chapitre 03.
-    private static readonly HashSet<string> ReservedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "Voyager", "Pioneer", "Spoutnik", "Apollo", "Rosetta",
-    };
+    private static readonly string[] HistoricMissions = ["Spoutnik", "Apollo", "Rosetta"];
+
+    // 🆕 C# 15 : collection expression arguments — with(...) passe le comparateur au constructeur.
+    private static readonly HashSet<string> ReservedNames =
+        [with(StringComparer.OrdinalIgnoreCase), "Voyager", "Pioneer", .. HistoricMissions];
 
     private readonly ConcurrentDictionary<string, Probe> _probes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lock _registering = new();
