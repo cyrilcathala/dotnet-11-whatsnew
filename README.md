@@ -62,6 +62,17 @@ curl http://localhost:5011/logbook/export -o journal-de-bord.jsonl
 
 Une entrée par ligne (les paquets conservés pour chaque sonde), au même format que l'import : le fichier se réimporte tel quel avec `POST /telemetry/import`.
 
+### Diagnostic de mission (file-based app)
+
+🆕 .NET 11 : un script C# sans `.csproj`, en deux fichiers (`#:include`), qui interroge l'API et résume la station sol, la flotte, la télémétrie et le rapport de mission :
+
+```bash
+dotnet run tools/diagnostic/mission-diagnostic.cs
+dotnet run tools/diagnostic/mission-diagnostic.cs -e MISSION_API_URL=https://localhost:7269
+```
+
+`-e` passe une variable d'environnement au script (par défaut : `http://localhost:5011`, le profil HTTP de l'API).
+
 ### Lancer les tests
 
 ```bash
@@ -80,6 +91,7 @@ MissionControl.slnx
 ├─ src/MissionControl.Telemetry        formats de télémétrie partagés (paquet, lecteurs et écrivains)
 ├─ tools/ProbeSimulator                console : génère et envoie la télémétrie des sondes
 ├─ tools/Houston                       console net10.0;net11.0 : Runtime Async, stack traces et benchmark (voir son README)
+├─ tools/diagnostic                    file-based app (hors solution) : diagnostic de mission
 └─ tests/MissionControl.Tests          xUnit v3 (Microsoft.Testing.Platform)
 ```
 
