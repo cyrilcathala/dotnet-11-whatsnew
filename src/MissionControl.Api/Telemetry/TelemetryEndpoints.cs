@@ -1,3 +1,5 @@
+using System.Formats.Cbor;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -91,6 +93,14 @@ public static class TelemetryEndpoints
                 statusCode: StatusCodes.Status400BadRequest,
                 title: "Body compressé illisible",
                 detail: $"La décompression a échoué ({exception.Message}). Les paquets lus avant l'erreur sont conservés.");
+        }
+        catch (Exception exception) when (exception is CborContentException or JsonException or OverflowException or FormatException)
+        {
+            // Levée par le lecteur de format : paquet tronqué, syntaxe invalide, nombre hors limites.
+            return TypedResults.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Payload de télémétrie illisible",
+                detail: $"Le contenu {format.Name} est mal formé ({exception.Message}). Les paquets lus avant l'erreur sont conservés.");
         }
     }
 

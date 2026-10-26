@@ -155,20 +155,28 @@ internal sealed class CborTelemetryFormat : ITelemetryFormat
         DateTimeOffset timestamp = default;
         SensorValue value = default;
 
-        cbor.ReadStartMap();
-        while (cbor.PeekState() != CborReaderState.EndMap)
+        try
         {
-            switch (cbor.ReadTextString())
+            cbor.ReadStartMap();
+            while (cbor.PeekState() != CborReaderState.EndMap)
             {
-                case "probe": probe = cbor.ReadTextString(); break;
-                case "seq": sequence = cbor.ReadInt64(); break;
-                case "at": timestamp = cbor.ReadDateTimeOffset(); break;
-                case "sensor": sensor = cbor.ReadTextString(); break;
-                case "value": value = ReadSensorValue(cbor); break;
-                default: cbor.SkipValue(); break;
+                switch (cbor.ReadTextString())
+                {
+                    case "probe": probe = cbor.ReadTextString(); break;
+                    case "seq": sequence = cbor.ReadInt64(); break;
+                    case "at": timestamp = cbor.ReadDateTimeOffset(); break;
+                    case "sensor": sensor = cbor.ReadTextString(); break;
+                    case "value": value = ReadSensorValue(cbor); break;
+                    default: cbor.SkipValue(); break;
+                }
             }
+            cbor.ReadEndMap();
         }
-        cbor.ReadEndMap();
+        catch (InvalidOperationException exception)
+        {
+            // CborReader signale un type inattendu (ex. "seq" en texte) par InvalidOperationException : le payload est mal formé.
+            throw new CborContentException($"Paquet CBOR mal formé : {exception.Message}", exception);
+        }
 
         return new TelemetryPacket(probe, sequence, timestamp, sensor, value);
     }
