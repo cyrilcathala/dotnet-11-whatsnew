@@ -15,7 +15,7 @@ public sealed class GroundStation(ProbeRegistry registry)
     {
         await Task.Delay(Latency, cancellationToken);
 
-        return !registry.Fleet.Any(p => p.LaunchWindowOpensAt < closesAt && opensAt < p.LaunchWindowClosesAt);
+        return !registry.Fleet.Any(p => p.Overlaps(opensAt, closesAt));
     }
 
     /// <summary>
@@ -32,7 +32,7 @@ public sealed class GroundStation(ProbeRegistry registry)
             var (opens, closes) = (opensAt.AddDays(day), closesAt.AddDays(day));
             foreach (var probe in fleet)
             {
-                if (probe.LaunchWindowOpensAt < closes && opens < probe.LaunchWindowClosesAt)
+                if (probe.Overlaps(opens, closes))
                     continue nextDay;
             }
 

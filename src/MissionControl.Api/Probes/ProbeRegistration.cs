@@ -34,13 +34,19 @@ public sealed class ProbeRegistration : IAsyncValidatableObject
         var station = validationContext.GetRequiredService<GroundStation>();
         if (!await station.IsWindowAvailableAsync(LaunchWindowOpensAt, LaunchWindowClosesAt, cancellationToken))
         {
-            var message = messages["LaunchWindowUnavailable"].Value;
-            if (station.FindNextFreeWindow(LaunchWindowOpensAt, LaunchWindowClosesAt) is (var opensAt, var closesAt))
-            {
-                message += " " + messages["LaunchWindowNextFree", opensAt, closesAt];
-            }
-            yield return new ValidationResult(message, [nameof(LaunchWindowOpensAt)]);
+            yield return new ValidationResult(WindowUnavailableMessage(station, messages), [nameof(LaunchWindowOpensAt)]);
         }
+    }
+
+    /// <summary>Fenêtre déjà réservée : le message propose la prochaine fenêtre libre, s'il y en a une.</summary>
+    public string WindowUnavailableMessage(GroundStation station, IStringLocalizer<ValidationMessages> messages)
+    {
+        var message = messages["LaunchWindowUnavailable"].Value;
+        if (station.FindNextFreeWindow(LaunchWindowOpensAt, LaunchWindowClosesAt) is (var opensAt, var closesAt))
+        {
+            message += " " + messages["LaunchWindowNextFree", opensAt, closesAt];
+        }
+        return message;
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
