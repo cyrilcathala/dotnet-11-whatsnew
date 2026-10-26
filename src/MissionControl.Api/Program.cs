@@ -16,7 +16,7 @@ builder.Services.AddProbes();
 builder.Services.AddCommands();
 builder.Services.AddTelemetry();
 builder.Services.AddMissionReport();
-builder.Services.AddLogbook();
+builder.Services.AddLogbook(builder.Configuration);
 
 // 🆕 ASP.NET Core 11 : le middleware de décompression gère zstd nativement (zstd, br, deflate, gzip).
 builder.Services.AddRequestDecompression();
