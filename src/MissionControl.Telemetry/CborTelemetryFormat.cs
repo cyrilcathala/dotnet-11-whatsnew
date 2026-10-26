@@ -12,6 +12,9 @@ internal sealed class CborTelemetryFormat : ITelemetryFormat
 {
     private const int FlushThreshold = 64 * 1024;
 
+    // Octets du segment suivant recopiés au minimum avec un paquet coupé : un paquet de télémétrie y tient largement.
+    private const int MinStitch = 512;
+
     // Lax : obligatoire pour lire avec isFinalBlock: false.
     private static readonly CborReaderOptions StreamOptions = new()
     {
@@ -30,35 +33,38 @@ internal sealed class CborTelemetryFormat : ITelemetryFormat
         var stream = new CborReader(ReadOnlyMemory<byte>.Empty, StreamOptions, isFinalBlock: false);
         var packet = new CborReader(ReadOnlyMemory<byte>.Empty, CborConformanceMode.Lax);
         var decoded = new List<TelemetryPacket>();
-        byte[]? contiguous = null;
+        byte[]? stitched = null;
 
         try
         {
             while (true)
             {
                 var result = await source.ReadAsync(cancellationToken);
-                var buffer = result.Buffer;
-                var memory = Contiguous(buffer, ref contiguous);
+                var remaining = result.Buffer;
 
-                // Le tampon du pipe commence par les octets que le lecteur n'a pas encore consommés
-                // (voir AdvanceTo plus bas) : on fait glisser la fenêtre sur les nouvelles données.
-                stream.SlideData(memory, isFinalBlock: result.IsCompleted);
-
-                // Seuls les paquets complets sont décodés : TrySkipValue refuse (sans bouger) un paquet coupé.
-                while (stream.PeekState() is not (CborReaderState.Finished or CborReaderState.NeedsMoreData))
+                // CborReader veut une mémoire contiguë : on lit le pipe segment par segment, sans copie.
+                // Seul un paquet coupé à la fin d'un segment est recopié, avec le début du segment suivant.
+                while (true)
                 {
-                    var start = memory.Length - stream.BytesRemaining;
-                    if (!stream.TrySkipValue())
+                    var window = remaining.IsSingleSegment || remaining.First.Length > stream.BytesRemaining
+                        ? remaining.First
+                        : Stitch(remaining, 2 * stream.BytesRemaining + MinStitch, ref stitched);
+                    var isLast = window.Length == remaining.Length;
+
+                    // La fenêtre commence par les octets que le lecteur n'a pas encore consommés
+                    // (le paquet coupé) : on la fait glisser sur les nouvelles données.
+                    stream.SlideData(window, isFinalBlock: result.IsCompleted && isLast);
+                    DecodeCompletePackets(stream, packet, window, decoded);
+
+                    remaining = remaining.Slice(window.Length - stream.BytesRemaining);
+                    if (isLast)
                     {
                         break;
                     }
-
-                    packet.Reset(memory[start..^stream.BytesRemaining], isFinalBlock: true);
-                    decoded.Add(Decode(packet));
                 }
 
                 // NeedsMoreData : on rend au pipe ce qui est consommé, et on attend la suite.
-                source.AdvanceTo(buffer.GetPosition(memory.Length - stream.BytesRemaining), buffer.End);
+                source.AdvanceTo(remaining.Start, result.Buffer.End);
 
                 foreach (var item in decoded)
                 {
@@ -78,9 +84,9 @@ internal sealed class CborTelemetryFormat : ITelemetryFormat
         }
         finally
         {
-            if (contiguous is not null)
+            if (stitched is not null)
             {
-                ArrayPool<byte>.Shared.Return(contiguous);
+                ArrayPool<byte>.Shared.Return(stitched);
             }
         }
     }
@@ -105,25 +111,40 @@ internal sealed class CborTelemetryFormat : ITelemetryFormat
         await destination.FlushAsync(cancellationToken);
     }
 
-    /// <summary>CborReader veut une mémoire contiguë : sans copie si le pipe n'a qu'un segment, sinon copie dans un tampon loué.</summary>
-    private static ReadOnlyMemory<byte> Contiguous(ReadOnlySequence<byte> buffer, ref byte[]? rented)
+    /// <summary>Seuls les paquets complets sont décodés : TrySkipValue refuse (sans bouger) un paquet coupé.</summary>
+    private static void DecodeCompletePackets(
+        CborReader stream, CborReader packet, ReadOnlyMemory<byte> window, List<TelemetryPacket> decoded)
     {
-        if (buffer.IsSingleSegment)
+        while (stream.PeekState() is not (CborReaderState.Finished or CborReaderState.NeedsMoreData))
         {
-            return buffer.First;
-        }
+            var start = window.Length - stream.BytesRemaining;
+            if (!stream.TrySkipValue())
+            {
+                return;
+            }
 
-        if (rented is null || rented.Length < buffer.Length)
+            packet.Reset(window[start..^stream.BytesRemaining], isFinalBlock: true);
+            decoded.Add(Decode(packet));
+        }
+    }
+
+    /// <summary>
+    /// Recopie dans un tampon loué les <paramref name="length"/> premiers octets restants : la queue du paquet coupé
+    /// et le début du segment suivant, pas plus. Si le paquet n'y tient toujours pas, la fenêtre suivante double.
+    /// </summary>
+    private static ReadOnlyMemory<byte> Stitch(ReadOnlySequence<byte> remaining, int length, ref byte[]? rented)
+    {
+        var bytes = remaining.Slice(0, Math.Min(length, remaining.Length));        if (rented is null || rented.Length < bytes.Length)
         {
             if (rented is not null)
             {
                 ArrayPool<byte>.Shared.Return(rented);
             }
-            rented = ArrayPool<byte>.Shared.Rent((int)buffer.Length);
+            rented = ArrayPool<byte>.Shared.Rent((int)bytes.Length);
         }
 
-        buffer.CopyTo(rented);
-        return rented.AsMemory(0, (int)buffer.Length);
+        bytes.CopyTo(rented);
+        return rented.AsMemory(0, (int)bytes.Length);
     }
 
     private static void Encode(CborWriter cbor, TelemetryPacket packet)

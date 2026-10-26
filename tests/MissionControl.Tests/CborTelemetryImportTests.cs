@@ -58,6 +58,21 @@ public sealed class CborTelemetryImportTests
     }
 
     [Fact]
+    public async Task Cbor_packets_larger_than_a_pipe_segment_survive_random_chunks()
+    {
+        // Un paquet sur cinq porte un texte de 10 ko : il s'étale sur plusieurs segments du pipe.
+        var packets = Dataset(500)
+            .Select((p, i) => i % 5 == 0 ? p with { Value = new string('x', 10_000 + i) } : p)
+            .ToArray();
+        var payload = await EncodeAsync(TelemetryFormats.Cbor, packets);
+
+        var singleBlock = await ImportAndObserveAsync(Cbor(new ByteArrayContent(payload)));
+        var chunked = await ImportAndObserveAsync(new RandomChunksContent(payload, seed: 11, maxChunkSize: 3_000));
+
+        Assert.Equal(singleBlock, chunked);
+    }
+
+    [Fact]
     public async Task Sensor_values_round_trip_through_json_without_configuration()
     {
         await using var api = new WebApplicationFactory<Program>();
