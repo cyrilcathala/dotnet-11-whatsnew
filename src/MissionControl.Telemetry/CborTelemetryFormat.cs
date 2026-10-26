@@ -205,7 +205,9 @@ internal sealed class CborTelemetryFormat : ITelemetryFormat
     /// <summary>Correspondance entre les types CBOR et les cas de l'union.</summary>
     private static SensorValue ReadSensorValue(CborReader cbor) => cbor.PeekState() switch
     {
-        CborReaderState.UnsignedInteger or CborReaderState.NegativeInteger => (double)cbor.ReadInt64(),
+        // Les entiers CBOR vont de -2⁶⁴ à 2⁶⁴ - 1 : au-delà de long, ReadInt64 lèverait OverflowException.
+        CborReaderState.UnsignedInteger => (double)cbor.ReadUInt64(),
+        CborReaderState.NegativeInteger => -1d - cbor.ReadCborNegativeIntegerRepresentation(),
         CborReaderState.HalfPrecisionFloat or CborReaderState.SinglePrecisionFloat or CborReaderState.DoublePrecisionFloat => cbor.ReadDouble(),
         CborReaderState.TextString => cbor.ReadTextString(),
         CborReaderState.Boolean => cbor.ReadBoolean(),
