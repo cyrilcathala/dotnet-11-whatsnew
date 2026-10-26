@@ -1,5 +1,6 @@
 using MissionControl.Api;
 using MissionControl.Api.Components;
+using MissionControl.Api.Logbook;
 using MissionControl.Api.Probes;
 using MissionControl.Api.Telemetry;
 
@@ -10,6 +11,7 @@ builder.AddServiceDefaults();
 builder.Services.AddSingleton<MissionStore>();
 builder.Services.AddProbes();
 builder.Services.AddTelemetry();
+builder.Services.AddLogbook();
 
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
 {
@@ -34,6 +36,7 @@ app.MapDefaultEndpoints();
 app.MapOpenApi();
 app.MapProbes();
 app.MapTelemetry();
+app.MapLogbook();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
