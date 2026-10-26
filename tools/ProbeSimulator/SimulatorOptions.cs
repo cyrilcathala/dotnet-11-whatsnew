@@ -29,10 +29,10 @@ internal sealed record SimulatorOptions(ITelemetryFormat Format, string Compress
             return false;
         }
 
-        var compression = values.GetValueOrDefault("compression", "none");
-        if (compression != "none")
+        var compression = values.GetValueOrDefault("compression", "none").ToLowerInvariant();
+        if (compression is not ("none" or "zstd"))
         {
-            error = $"Compression non disponible : {compression} (disponible : none).";
+            error = $"Compression non disponible : {compression} (disponibles : none, zstd).";
             return false;
         }
 
