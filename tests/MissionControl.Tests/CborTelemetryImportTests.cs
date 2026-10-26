@@ -1,3 +1,4 @@
+using System.Formats.Cbor;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http.Json;
@@ -55,6 +56,54 @@ public sealed class CborTelemetryImportTests
         var chunked = await ImportAndObserveAsync(new RandomChunksContent(payload, seed: 7, maxChunkSize: 37));
 
         Assert.Equal(singleBlock, chunked);
+    }
+
+    [Fact]
+    public async Task Cbor_packets_larger_than_a_pipe_segment_survive_random_chunks()
+    {
+        // Un paquet sur cinq porte un texte de 10 ko : il s'étale sur plusieurs segments du pipe.
+        var packets = Dataset(500)
+            .Select((p, i) => i % 5 == 0 ? p with { Value = new string('x', 10_000 + i) } : p)
+            .ToArray();
+        var payload = await EncodeAsync(TelemetryFormats.Cbor, packets);
+
+        var singleBlock = await ImportAndObserveAsync(Cbor(new ByteArrayContent(payload)));
+        var chunked = await ImportAndObserveAsync(new RandomChunksContent(payload, seed: 11, maxChunkSize: 3_000));
+
+        Assert.Equal(singleBlock, chunked);
+    }
+
+    [Fact]
+    public async Task Cbor_integers_beyond_the_long_range_are_read_as_numbers()
+    {
+        await using var api = new WebApplicationFactory<Program>();
+        using var client = api.CreateClient();
+        var cbor = new CborWriter(CborConformanceMode.Lax, allowMultipleRootLevelValues: true);
+        WritePacket(cbor, seq: 0, writeValue: () => cbor.WriteUInt64(ulong.MaxValue));
+        WritePacket(cbor, seq: 1, writeValue: () => cbor.WriteCborNegativeIntegerRepresentation(ulong.MaxValue));
+
+        var response = await client.PostAsync("/telemetry/import", Cbor(new ByteArrayContent(cbor.Encode())), Ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var window = await client.GetFromJsonAsync<JsonElement>("/telemetry/probes/Juno/launch", Ct);
+        var packets = window.GetProperty("packets").Deserialize<TelemetryPacket[]>(JsonSerializerOptions.Default)!;
+        Assert.Equal([18446744073709551615d, -18446744073709551616d], packets.Select(p => p.Value.Value));
+
+        static void WritePacket(CborWriter cbor, int seq, Action writeValue)
+        {
+            cbor.WriteStartMap(5);
+            cbor.WriteTextString("probe");
+            cbor.WriteTextString("Juno");
+            cbor.WriteTextString("seq");
+            cbor.WriteInt64(seq);
+            cbor.WriteTextString("at");
+            cbor.WriteDateTimeOffset(new DateTimeOffset(2026, 11, 17, 8, 0, seq, TimeSpan.Zero));
+            cbor.WriteTextString("sensor");
+            cbor.WriteTextString("compteur");
+            cbor.WriteTextString("value");
+            writeValue();
+            cbor.WriteEndMap();
+        }
     }
 
     [Fact]

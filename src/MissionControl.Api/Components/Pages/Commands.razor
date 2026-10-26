@@ -102,7 +102,7 @@ else
 
     private void Send(ProbeCommand command)
     {
-        if (!Center.TrySend(command, out var result)) return;
+        if (Center.Send(command, out var result) is not SendStatus.Sent) return;
 
         _last = new(command, result);
         _confirmationCode = "";

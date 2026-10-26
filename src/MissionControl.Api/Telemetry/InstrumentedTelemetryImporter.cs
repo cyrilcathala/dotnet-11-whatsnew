@@ -21,9 +21,18 @@ public sealed class InstrumentedTelemetryImporter(
         var cpuBefore = ProcessorTime();
         var workingSet = PeakWorkingSet.StartSampling();
 
-        var summary = await inner.ImportAsync(payload, format, cancellationToken);
+        ImportSummary summary;
+        long peakWorkingSet;
+        try
+        {
+            summary = await inner.ImportAsync(payload, format, cancellationToken);
+        }
+        finally
+        {
+            // Même si l'import échoue (payload illisible, client parti) : l'échantillonnage s'arrête.
+            peakWorkingSet = await workingSet.StopAsync();
+        }
 
-        var peakWorkingSet = await workingSet.StopAsync();
         var cpu = ProcessorTime() - cpuBefore;
         var allocated = GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore;
 

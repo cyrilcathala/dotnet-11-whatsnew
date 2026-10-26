@@ -99,7 +99,7 @@
 
     private void Register()
     {
-        if (!Registry.TryRegister(_registration.ToProbe())) return;
+        if (Registry.Register(_registration.ToProbe()) is not RegistrationStatus.Registered) return;
 
         _lastRegistered = _registration.Name;
         _registration = NewRegistration();

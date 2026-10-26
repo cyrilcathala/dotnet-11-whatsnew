@@ -1,3 +1,5 @@
+using System.Formats.Cbor;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -103,6 +105,66 @@ public sealed class TelemetryImportTests : IAsyncDisposable
         Assert.Equal(0, status!.Packets);
     }
 
+    [Fact]
+    public async Task Malformed_jsonl_is_a_bad_request_in_french()
+    {
+        const string body = """
+            {"probe":"Juno","seq":0,"at":"2026-11-17T08:00:00+00:00","sensor":"temperature","value":-12.5}
+            {"probe":"Juno","seq":1,"at":
+            """;
+
+        var response = await _client.PostAsync("/telemetry/import", Jsonl(body), Ct);
+
+        await AssertUnreadablePayloadAsync(response);
+    }
+
+    [Fact]
+    public async Task Truncated_cbor_is_a_bad_request_in_french()
+    {
+        var payload = await EncodeAsync(TelemetryFormats.Cbor, Generate(["Juno"], 3));
+        var content = new ByteArrayContent(payload[..^5]);
+        content.Headers.ContentType = new("application/cbor");
+
+        var response = await _client.PostAsync("/telemetry/import", content, Ct);
+
+        await AssertUnreadablePayloadAsync(response);
+    }
+
+    [Fact]
+    public async Task Cbor_packet_with_a_field_of_the_wrong_type_is_a_bad_request_in_french()
+    {
+        var cbor = new CborWriter();
+        cbor.WriteStartMap(2);
+        cbor.WriteTextString("probe");
+        cbor.WriteTextString("Juno");
+        cbor.WriteTextString("seq");
+        cbor.WriteTextString("zéro");
+        cbor.WriteEndMap();
+        var content = new ByteArrayContent(cbor.Encode());
+        content.Headers.ContentType = new("application/cbor");
+
+        var response = await _client.PostAsync("/telemetry/import", content, Ct);
+
+        await AssertUnreadablePayloadAsync(response);
+    }
+
+    private static async Task AssertUnreadablePayloadAsync(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDto>(Ct);
+        Assert.Equal("Payload de télémétrie illisible", problem!.Title);
+    }
+
+    private static async Task<byte[]> EncodeAsync(ITelemetryFormat format, IAsyncEnumerable<TelemetryPacket> packets)
+    {
+        using var buffer = new MemoryStream();
+        var writer = PipeWriter.Create(buffer);
+        await format.WriteAsync(writer, packets, Ct);
+        await writer.CompleteAsync();
+        return buffer.ToArray();
+    }
+
     private static async IAsyncEnumerable<TelemetryPacket> Generate(string[] probes, int count)
     {
         for (var i = 0; i < count; i++)
@@ -130,6 +192,8 @@ public sealed class TelemetryImportTests : IAsyncDisposable
     }
 
     private sealed record ImportSummaryDto(string Format, long Packets, int Probes);
+
+    private sealed record ProblemDto(string? Title, string? Detail);
 
     private sealed record TelemetryStatusDto(long Packets, ProbeTelemetryDto[] Probes);
 

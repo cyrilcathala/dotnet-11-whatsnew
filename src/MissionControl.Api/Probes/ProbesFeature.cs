@@ -29,15 +29,23 @@ public static class ProbesFeature
         probes.MapGet("/", (ProbeRegistry registry) => registry.Fleet);
 
         // 🆕 .NET 11 : la validation async (attribut + IAsyncValidatableObject) s'exécute avant le handler.
-        probes.MapPost("/", (ProbeRegistration registration, ProbeRegistry registry, IStringLocalizer<ValidationMessages> messages) =>
+        // Deux demandes simultanées peuvent passer la validation : l'enregistrement revérifie nom et fenêtre.
+        probes.MapPost("/", (ProbeRegistration registration, ProbeRegistry registry, GroundStation station,
+            IStringLocalizer<ValidationMessages> messages) =>
         {
             var probe = registration.ToProbe();
-            return registry.TryRegister(probe)
-                ? Results.Created($"/probes/{Uri.EscapeDataString(probe.Name)}", probe)
-                : Results.ValidationProblem(new Dictionary<string, string[]>
+            return registry.Register(probe) switch
+            {
+                RegistrationStatus.NameTaken => Results.ValidationProblem(new Dictionary<string, string[]>
                 {
                     [nameof(ProbeRegistration.Name)] = [messages["NameTaken"]],
-                });
+                }),
+                RegistrationStatus.WindowTaken => Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    [nameof(ProbeRegistration.LaunchWindowOpensAt)] = [registration.WindowUnavailableMessage(station, messages)],
+                }),
+                _ => Results.Created($"/probes/{Uri.EscapeDataString(probe.Name)}", probe),
+            };
         });
 
         return endpoints;
